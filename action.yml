@@ -1,0 +1,43 @@
+name: setup-nix
+author: Shikanime Studio
+branding:
+  icon: globe
+  color: gray-dark
+description: Setup Nix using Determinate Systems installer and cache
+inputs:
+  extra-args:
+    description: Extra arguments to pass to Determinate Systems nix-installer
+    required: false
+    default: ""
+  extra-conf:
+    description: Additional Nix configuration to append to nix.conf
+    required: false
+    default: ""
+  extra-platforms:
+    description: Space-separated Nix platforms to enable (e.g., aarch64-linux)
+    required: false
+    default: ""
+  github-token:
+    description: GitHub token, used by the Determinate Systems installer
+    required: false
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - uses: docker/setup-qemu-action@v3
+      if: ${{ inputs.extra-platforms != '' }}
+    - uses: DeterminateSystems/nix-installer-action@v20
+      with:
+        diagnostic-endpoint: ""
+        github-token: ${{ inputs.github-token }}
+        extra-conf: |
+          extra-platforms = ${{ inputs.extra-platforms }}
+          ${{ inputs.extra-conf }}
+        extra-args: ${{ inputs.extra-args }}
+    - uses: DeterminateSystems/magic-nix-cache-action@v13
+      with:
+        diagnostic-endpoint: ""
+        use-flakehub: false
+    - uses: DeterminateSystems/flake-checker-action@v12
+      with:
+        send-statistics: false
