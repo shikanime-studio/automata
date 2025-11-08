@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shikanime/automata/internal/registry"
-	"github.com/shikanime/automata/internal/utils"
+	"github.com/shikanime-studio/automata/internal/registry"
+	"github.com/shikanime-studio/automata/internal/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"sigs.k8s.io/kustomize/kyaml/kio"

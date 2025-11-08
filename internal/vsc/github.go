@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/google/go-github/v55/github"
-	"github.com/shikanime/automata/internal/utils"
+	"github.com/shikanime-studio/automata/internal/utils"
 	"golang.org/x/time/rate"
 )
 

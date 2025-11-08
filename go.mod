@@ -1,4 +1,4 @@
-module github.com/shikanime/automata
+module github.com/shikanime-studio/automata
 
 go 1.24.5
 

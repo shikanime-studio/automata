@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shikanime/automata/internal/utils"
+	"github.com/shikanime-studio/automata/internal/utils"
 	"github.com/spf13/cobra"
 )
 
