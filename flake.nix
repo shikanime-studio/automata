@@ -81,13 +81,6 @@
                   pkgs.sops
                 ];
               };
-              update = {
-                containers = pkgs.lib.mkForce { };
-                packages = [
-                  pkgs.gh
-                  pkgs.sapling
-                ];
-              };
             };
           };
         };
