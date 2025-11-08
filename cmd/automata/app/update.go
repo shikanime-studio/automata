@@ -3,8 +3,8 @@ package app
 import (
 	"strings"
 
-	"github.com/shikanime/automata/internal/config"
-	"github.com/shikanime/automata/internal/vsc"
+	"github.com/shikanime-studio/automata/internal/config"
+	"github.com/shikanime-studio/automata/internal/vsc"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )

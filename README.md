@@ -35,7 +35,7 @@ go build -o automata ./cmd/automata
 
 Alternatively:
 
-- `go install github.com/shikanime/automata/cmd/automata@latest`
+- `go install github.com/shikanime-studio/automata/cmd/automata@latest`
 - With Nix: check `flake.nix` and use your preferred `nix build` workflow
 
 ## Usage

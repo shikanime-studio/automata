@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/shikanime/automata/internal/utils"
+	"github.com/shikanime-studio/automata/internal/utils"
 )
 
 // ListTags fetches tags for the given image (auth keychain, fallback anonymous).

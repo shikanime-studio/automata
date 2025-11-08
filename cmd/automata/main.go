@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/shikanime/automata/cmd/automata/app"
-	"github.com/shikanime/automata/internal/config"
+	"github.com/shikanime-studio/automata/cmd/automata/app"
+	"github.com/shikanime-studio/automata/internal/config"
 	"github.com/spf13/cobra"
 )
 
