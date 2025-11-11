@@ -95,7 +95,11 @@ func WithPreRelease(include bool) FindLatestActionOption {
 }
 
 // FindLatestActionTag returns the latest tag for the given GitHub Action based on provided options.
-func (gc *GitHubClient) FindLatestActionTag(ctx context.Context, action *GitHubActionRef, opts ...FindLatestActionOption) (string, error) {
+func (gc *GitHubClient) FindLatestActionTag(
+	ctx context.Context,
+	action *GitHubActionRef,
+	opts ...FindLatestActionOption,
+) (string, error) {
 	o := &findLatestActionOptions{updateStrategy: utils.FullUpdate}
 	for _, opt := range opts {
 		opt(o)

@@ -3,6 +3,7 @@
     devenv.url = "github:cachix/devenv";
     devlib.url = "github:shikanime-studio/devlib";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    git-hooks.url = "github:cachix/git-hooks.nix";
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     treefmt-nix.url = "github:numtide/treefmt-nix";
   };
@@ -25,60 +26,50 @@
       devenv,
       devlib,
       flake-parts,
+      git-hooks,
       treefmt-nix,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         devenv.flakeModule
+        devlib.flakeModule
+        git-hooks.flakeModule
         treefmt-nix.flakeModule
       ];
       perSystem =
-        { self', pkgs, ... }:
+        { pkgs, ... }:
         {
-          treefmt = {
-            projectRootFile = "flake.nix";
-            enableDefaultExcludes = true;
-            programs = {
-              gofmt.enable = true;
-              nixfmt.enable = true;
-              prettier.enable = true;
-              shfmt.enable = true;
-              statix.enable = true;
+          devenv.shells.default = {
+            cachix = {
+              enable = true;
+              push = "shikanime";
             };
-            settings.global.excludes = [
-              "*.excalidraw"
-              ".gitattributes"
-              "LICENSE"
+            containers = pkgs.lib.mkForce { };
+            gitignore = {
+              enable = true;
+              enableDefaultTemplates = true;
+              content = [
+                "config.xml"
+              ];
+            };
+            github.enable = true;
+            languages = {
+              go.enable = true;
+              nix.enable = true;
+            };
+            packages = [
+              pkgs.gh
+              pkgs.sapling
+              pkgs.sops
             ];
-          };
-          devenv = {
-            modules = [
-              devlib.devenvModule
-            ];
-            shells = {
-              default = {
-                cachix = {
-                  enable = true;
-                  push = "shikanime";
-                };
-                containers = pkgs.lib.mkForce { };
-                gitignore = {
-                  enable = true;
-                  enableDefaultTemplates = true;
-                  content = [
-                    "config.xml"
-                  ];
-                };
-                github.enable = true;
-                languages = {
-                  go.enable = true;
-                  nix.enable = true;
-                };
-                packages = [
-                  pkgs.gh
-                  pkgs.sapling
-                  pkgs.sops
+            treefmt = {
+              enable = true;
+              config = {
+                enableDefaultExcludes = true;
+                programs.prettier.enable = true;
+                settings.global.excludes = [
+                  "*.excalidraw"
                 ];
               };
             };

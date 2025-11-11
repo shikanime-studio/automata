@@ -57,7 +57,11 @@ func runGitHubUpdateWorkflow(ctx context.Context, client *vsc.GitHubClient, root
 	return g.Wait()
 }
 
-func createUpdateGitHubWorkflowJob(ctx context.Context, client *vsc.GitHubClient, path string) func() error {
+func createUpdateGitHubWorkflowJob(
+	ctx context.Context,
+	client *vsc.GitHubClient,
+	path string,
+) func() error {
 	return func() error {
 		if err := createUpdateGitHubWorkflowPipeline(ctx, client, path).Execute(); err != nil {
 			slog.Warn("skip github workflow update", "dir", path, "err", err)
@@ -67,7 +71,11 @@ func createUpdateGitHubWorkflowJob(ctx context.Context, client *vsc.GitHubClient
 	}
 }
 
-func createUpdateGitHubWorkflowPipeline(ctx context.Context, client *vsc.GitHubClient, path string) kio.Pipeline {
+func createUpdateGitHubWorkflowPipeline(
+	ctx context.Context,
+	client *vsc.GitHubClient,
+	path string,
+) kio.Pipeline {
 	return kio.Pipeline{
 		Inputs: []kio.Reader{
 			kio.LocalPackageReader{
@@ -122,7 +130,12 @@ func processWorkflowNode(ctx context.Context, client *vsc.GitHubClient, root *ya
 	return nil
 }
 
-func processJob(ctx context.Context, client *vsc.GitHubClient, jobsNode *yaml.RNode, jobName string) error {
+func processJob(
+	ctx context.Context,
+	client *vsc.GitHubClient,
+	jobsNode *yaml.RNode,
+	jobName string,
+) error {
 	jobNode, err := jobsNode.Pipe(yaml.Lookup(jobName))
 	if err != nil || jobNode == nil {
 		slog.Info("skip job without steps", "job", jobName)
@@ -147,7 +160,13 @@ func processJob(ctx context.Context, client *vsc.GitHubClient, jobsNode *yaml.RN
 	return wg.Wait()
 }
 
-func processStep(ctx context.Context, client *vsc.GitHubClient, step *yaml.RNode, jobName string, idx int) error {
+func processStep(
+	ctx context.Context,
+	client *vsc.GitHubClient,
+	step *yaml.RNode,
+	jobName string,
+	idx int,
+) error {
 	usesNode, err := step.Pipe(yaml.Get("uses"))
 	if err != nil {
 		return fmt.Errorf("get uses: %w", err)
@@ -163,19 +182,43 @@ func processStep(ctx context.Context, client *vsc.GitHubClient, step *yaml.RNode
 
 	actionRef, err := vsc.ParseGitHubActionRef(curr)
 	if err != nil {
-		slog.Info("non-versioned uses entry; skipping", "job", jobName, "step_index", idx, "uses", curr, "error", err)
+		slog.Info(
+			"non-versioned uses entry; skipping",
+			"job",
+			jobName,
+			"step_index",
+			idx,
+			"uses",
+			curr,
+			"error",
+			err,
+		)
 		return nil
 	}
 
 	// Maintain original behavior: skip versions containing '/'
 	if strings.Contains(actionRef.Version, "/") {
-		slog.Info("skip uses with slash in version", "job", jobName, "action", fmt.Sprintf("%s/%s", actionRef.Owner, actionRef.Repo), "version", actionRef.Version)
+		slog.Info(
+			"skip uses with slash in version",
+			"job",
+			jobName,
+			"action",
+			fmt.Sprintf("%s/%s", actionRef.Owner, actionRef.Repo),
+			"version",
+			actionRef.Version,
+		)
 		return nil
 	}
 
 	latest, err := client.FindLatestActionTag(ctx, actionRef)
 	if err != nil {
-		slog.Warn("failed to fetch latest tag with strategy", "action", actionRef.String(), "error", err)
+		slog.Warn(
+			"failed to fetch latest tag with strategy",
+			"action",
+			actionRef.String(),
+			"error",
+			err,
+		)
 		return nil
 	}
 	if latest == "" {
@@ -190,9 +233,27 @@ func processStep(ctx context.Context, client *vsc.GitHubClient, step *yaml.RNode
 		Version: latest,
 	}
 	if err := step.PipeE(yaml.SetField("uses", yaml.NewStringRNode(newActionRef.String()))); err != nil {
-		slog.Warn("failed to update uses", "job", jobName, "action", fmt.Sprintf("%s/%s", actionRef.Owner, actionRef.Repo), "error", err)
+		slog.Warn(
+			"failed to update uses",
+			"job",
+			jobName,
+			"action",
+			fmt.Sprintf("%s/%s", actionRef.Owner, actionRef.Repo),
+			"error",
+			err,
+		)
 		return fmt.Errorf("set uses for %s/%s: %w", actionRef.Owner, actionRef.Repo, err)
 	}
-	slog.Info("updated action", "job", jobName, "action", fmt.Sprintf("%s/%s", actionRef.Owner, actionRef.Repo), "from", actionRef.Version, "to", latest)
+	slog.Info(
+		"updated action",
+		"job",
+		jobName,
+		"action",
+		fmt.Sprintf("%s/%s", actionRef.Owner, actionRef.Repo),
+		"from",
+		actionRef.Version,
+		"to",
+		latest,
+	)
 	return nil
 }
