@@ -55,4 +55,5 @@ func init() {
 	UpdateCmd.AddCommand(UpdateGitHubWorkflowCmd)
 	UpdateCmd.AddCommand(UpdateScriptCmd)
 	UpdateCmd.AddCommand(UpdateFlakeCmd)
+	UpdateCmd.AddCommand(UpdateK0sctlCmd)
 }
