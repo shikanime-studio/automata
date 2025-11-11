@@ -310,4 +310,3 @@ go.work
 
 __debug_bin*
 .pre-commit-config.yaml
-config.xml
