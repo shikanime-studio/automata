@@ -38,7 +38,12 @@
         treefmt-nix.flakeModule
       ];
       perSystem =
-        { pkgs, ... }:
+        {
+          pkgs,
+          self,
+          system,
+          ...
+        }:
         {
           devenv.shells.default = {
             cachix = {
@@ -69,6 +74,19 @@
                   "*.excalidraw"
                 ];
               };
+            };
+          };
+
+          packages.default = pkgs.buildGoModule {
+            pname = "automata";
+            version = "v0.1.0";
+            src = pkgs.lib.cleanSource ./.;
+            subPackages = [ "cmd/automata" ];
+            vendorHash = "sha256-C4CTWF8ESQi3PcgPN1HUfkkCPXeeOJE3zHONEYJS2hE=";
+            meta = with pkgs.lib; {
+              description = "Automata CLI";
+              homepage = "https://github.com/shikanime-studio/automata";
+              license = licenses.asl20;
             };
           };
         };
