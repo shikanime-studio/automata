@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(
+	slog.SetDefault(slog.New(slog.NewTextHandler(
 		os.Stderr,
 		&slog.HandlerOptions{Level: config.GetLogLevel()},
 	)))
