@@ -18,7 +18,13 @@ func ListTags(imageRef *ImageRef) ([]string, error) {
 		crane.WithAuthFromKeychain(authn.DefaultKeychain),
 	)
 	if err != nil {
-		slog.Debug("list tags with keychain failed, falling back to anonymous", "image", imageRef.String(), "err", err)
+		slog.Debug(
+			"list tags with keychain failed, falling back to anonymous",
+			"image",
+			imageRef.String(),
+			"err",
+			err,
+		)
 		tags, err = crane.ListTags(
 			imageRef.Name,
 			crane.WithAuth(authn.Anonymous),

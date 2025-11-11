@@ -176,7 +176,10 @@ func (c *ImagesConfig) UnmarshalJSON(data []byte) error {
 		case "PatchUpdate":
 			c.StrategyType = PatchUpdate
 		default:
-			return fmt.Errorf("invalid update-strategy %q: must be one of 'Full', 'Minor', 'Patch'", raw.StrategyType)
+			return fmt.Errorf(
+				"invalid update-strategy %q: must be one of 'Full', 'Minor', 'Patch'",
+				raw.StrategyType,
+			)
 		}
 	}
 

@@ -170,7 +170,15 @@ func createUpdateImagesFilter() kio.Filter {
 				if err = img.PipeE(yaml.SetField("newTag", yaml.NewStringRNode(latest))); err != nil {
 					return nil, fmt.Errorf("set newTag for %s: %w", name, err)
 				}
-				slog.Info("updated image tag", "name", name, "image", imageRef.String(), "tag", latest)
+				slog.Info(
+					"updated image tag",
+					"name",
+					name,
+					"image",
+					imageRef.String(),
+					"tag",
+					latest,
+				)
 			}
 		}
 		return nodes, nil
@@ -258,7 +266,15 @@ func createUpdateLabelsFilter() kio.Filter {
 					if err = root.PipeE(utils.SetRecommandedLabels(name, vers)); err != nil {
 						return nil, fmt.Errorf("set %s: %w", utils.KubernetesVersionLabel, err)
 					}
-					slog.Info("updated recommended labels", "name", name, "image", name, "tag", latest)
+					slog.Info(
+						"updated recommended labels",
+						"name",
+						name,
+						"image",
+						name,
+						"tag",
+						latest,
+					)
 				}
 			}
 		}

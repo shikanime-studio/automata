@@ -40,40 +40,38 @@
       perSystem =
         { self', pkgs, ... }:
         {
-          devenv.shells = {
-            default = {
-              cachix = {
-                enable = true;
-                push = "shikanime";
-              };
-              containers = pkgs.lib.mkForce { };
-              gitignore = {
-                enable = true;
-                enableDefaultTemplates = true;
-                content = [
-                  "config.xml"
-                ];
-              };
-              github.enable = true;
-              languages = {
-                go.enable = true;
-                nix.enable = true;
-              };
-              packages = [
-                pkgs.gh
-                pkgs.sapling
-                pkgs.sops
-              ];
-          treefmt = {
-            enable = true;
-            config = {
-              enableDefaultExcludes = true;
-              programs.prettier.enable = true;
-              settings.global.excludes = [
-                "*.excalidraw"
+          devenv.shells.default = {
+            cachix = {
+              enable = true;
+              push = "shikanime";
+            };
+            containers = pkgs.lib.mkForce { };
+            gitignore = {
+              enable = true;
+              enableDefaultTemplates = true;
+              content = [
+                "config.xml"
               ];
             };
-          };
+            github.enable = true;
+            languages = {
+              go.enable = true;
+              nix.enable = true;
+            };
+            packages = [
+              pkgs.gh
+              pkgs.sapling
+              pkgs.sops
+            ];
+            treefmt = {
+              enable = true;
+              config = {
+                enableDefaultExcludes = true;
+                programs.prettier.enable = true;
+                settings.global.excludes = [
+                  "*.excalidraw"
+                ];
+              };
             };
           };
         };
