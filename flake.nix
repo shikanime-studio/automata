@@ -70,9 +70,6 @@
               config = {
                 enableDefaultExcludes = true;
                 programs.prettier.enable = true;
-                settings.global.excludes = [
-                  "*.excalidraw"
-                ];
               };
             };
           };
