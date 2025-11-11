@@ -38,7 +38,7 @@
         treefmt-nix.flakeModule
       ];
       perSystem =
-        { self', pkgs, ... }:
+        { pkgs, ... }:
         {
           devenv.shells.default = {
             cachix = {
