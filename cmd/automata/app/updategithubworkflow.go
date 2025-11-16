@@ -50,7 +50,7 @@ func runGitHubUpdateWorkflow(ctx context.Context, client *vsc.GitHubClient, root
 		return fmt.Errorf("read workflows dir: %w", err)
 	}
 
-	g := new(errgroup.Group)
+	var g errgroup.Group
 	for _, e := range entries {
 		if e.IsDir() {
 			continue
@@ -162,7 +162,7 @@ func processJob(
 		slog.Warn("failed to get steps", "job", jobName, "err", err)
 		return fmt.Errorf("get steps: %w", err)
 	}
-	wg := new(errgroup.Group)
+	var wg errgroup.Group
 	for idx, step := range stepElems {
 		wg.Go(func() error {
 			return processStep(ctx, client, step, jobName, idx)

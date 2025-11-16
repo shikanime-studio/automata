@@ -34,7 +34,7 @@ func NewUpdateKustomizationCmd() *cobra.Command {
 
 // runUpdateKustomization executes the kustomization update across the directory tree.
 func runUpdateKustomization(root string) error {
-	g := new(errgroup.Group)
+	var g errgroup.Group
 	if err := utils.WalkDirWithGitignore(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err

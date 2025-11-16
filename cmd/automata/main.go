@@ -15,6 +15,10 @@ import (
 // configuration.
 func init() {
 	cfg := config.New()
+	if err := cfg.Bind(); err != nil {
+		slog.Error("failed to bind config", "err", err)
+		os.Exit(1)
+	}
 	opts := &slog.HandlerOptions{Level: cfg.LogLevel(), AddSource: cfg.LogSource()}
 	var h slog.Handler
 	if cfg.LogFormat() == "json" {
@@ -32,6 +36,10 @@ func main() {
 		Short: "Automata CLI",
 	}
 	cfg := config.New()
+	if err := cfg.Bind(); err != nil {
+		slog.Error("failed to bind config", "err", err)
+		os.Exit(1)
+	}
 	rootCmd.AddCommand(app.NewUpdateCmd(cfg))
 	if err := rootCmd.Execute(); err != nil {
 		slog.Error("command execution failed", "err", err)

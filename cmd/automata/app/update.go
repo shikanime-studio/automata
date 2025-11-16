@@ -26,7 +26,7 @@ func NewUpdateCmd(cfg *config.Config) *cobra.Command {
 				root = args[0]
 			}
 
-			g := new(errgroup.Group)
+			var g errgroup.Group
 			g.Go(func() error {
 				return runUpdateKustomization(root)
 			})

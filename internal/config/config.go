@@ -2,8 +2,6 @@ package config
 
 import (
 	"log/slog"
-	"os"
-	"path/filepath"
 
 	"github.com/spf13/viper"
 )
@@ -19,22 +17,24 @@ func New() *Config {
 	v.SetDefault("log_level", "info")
 	v.SetDefault("log_format", "text")
 	v.SetDefault("log_source", false)
-
-	v.BindEnv("log_level", "LOG_LEVEL")
-	v.BindEnv("log_format", "LOG_FORMAT")
-	v.BindEnv("log_source", "LOG_SOURCE")
-	v.BindEnv("github_token", "GITHUB_TOKEN")
-
-	v.AutomaticEnv()
-
-	v.SetConfigName("automata")
-	v.SetConfigType("yaml")
-	v.AddConfigPath(".")
-	if home, err := os.UserHomeDir(); err == nil {
-		v.AddConfigPath(filepath.Join(home, ".config", "automata"))
-	}
-	_ = v.ReadInConfig()
 	return &Config{v: v}
+}
+
+func (c *Config) Bind() error {
+	if err := c.v.BindEnv("log_level", "LOG_LEVEL"); err != nil {
+		return err
+	}
+	if err := c.v.BindEnv("log_format", "LOG_FORMAT"); err != nil {
+		return err
+	}
+	if err := c.v.BindEnv("log_source", "LOG_SOURCE"); err != nil {
+		return err
+	}
+	if err := c.v.BindEnv("github_token", "GITHUB_TOKEN"); err != nil {
+		return err
+	}
+	c.v.AutomaticEnv()
+	return nil
 }
 
 // LogLevel returns the configured slog level, defaulting to info when unset or
@@ -73,8 +73,7 @@ func (c *Config) LogSource() bool {
 	return c.v.GetBool("log_source")
 }
 
-// GitHubToken returns the GitHub token from config or the `GH_TOKEN`
-// environment variable when not set.
+// GitHubToken returns the GitHub token from config.
 func (c *Config) GitHubToken() string {
 	return c.v.GetString("github_token")
 }
