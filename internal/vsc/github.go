@@ -158,18 +158,18 @@ func (gc *GitHubClient) FindLatestActionTag(
 		switch o.updateStrategy {
 		case utils.MinorUpdate:
 			if utils.Major(sem) == baseline {
-				bestTag = sem
+				bestTag = *t.Name
 			} else {
 				slog.Debug("tag excluded by update strategy", "tag", *t.Name, "sem", sem, "baseline", baseline)
 			}
 		case utils.PatchUpdate:
 			if utils.MajorMinor(sem) == baseline {
-				bestTag = sem
+				bestTag = *t.Name
 			} else {
 				slog.Debug("tag excluded by update strategy", "tag", *t.Name, "sem", sem, "baseline", baseline)
 			}
 		default:
-			bestTag = sem
+			bestTag = *t.Name
 		}
 	}
 
