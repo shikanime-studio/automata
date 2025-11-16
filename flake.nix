@@ -41,7 +41,6 @@
         {
           pkgs,
           self,
-          system,
           ...
         }:
         {
