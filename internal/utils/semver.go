@@ -46,18 +46,11 @@ func ParseSemverWithRegex(re *regexp.Regexp, v string) (string, error) {
 	}
 
 	raw := getSubexpValue(re, m, "version")
-	if raw != "" {
-		canon, err := ParseSemver(raw)
-		if err == nil {
-			return canon, nil
-		}
+	if raw == "" {
+		raw = parseSemverWithRegex(re, m)
 	}
 
-	built, ok := parseSemverWithRegex(re, m)
-	if !ok {
-		return "", fmt.Errorf("no version groups matched in tag %q", v)
-	}
-	canon, err := ParseSemver(built)
+	canon, err := ParseSemver(raw)
 	if err != nil {
 		return "", err
 	}
@@ -72,7 +65,7 @@ func getSubexpValue(re *regexp.Regexp, m []string, name string) string {
 	return ""
 }
 
-func parseSemverWithRegex(re *regexp.Regexp, m []string) (string, bool) {
+func parseSemverWithRegex(re *regexp.Regexp, m []string) string {
 	maj := getSubexpValue(re, m, "major")
 	if maj == "" {
 		maj = "0"
@@ -94,7 +87,7 @@ func parseSemverWithRegex(re *regexp.Regexp, m []string) (string, bool) {
 	if bld != "" {
 		s += "+" + bld
 	}
-	return s, true
+	return s
 }
 
 // NormalizeSemverPrefix normalizes a tag to have a leading 'v' and no 'V' prefix.
