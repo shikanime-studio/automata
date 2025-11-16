@@ -17,25 +17,28 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-var UpdateGitHubWorkflowCmd = &cobra.Command{
-	Use:   "githubworkflow [DIR]",
-	Short: "Update GitHub Actions in workflows to latest major versions",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		root := "."
-		if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-			root = args[0]
-		}
-		options := []vsc.GitHubClientOption{
-			vsc.WithAuthToken(config.GetGithubToken()),
-		}
-		token := config.GetGithubToken()
-		if token != "" {
-			options = append(options, vsc.WithAuthToken(token))
-		}
-		return runGitHubUpdateWorkflow(cmd.Context(), vsc.NewGitHubClient(options...), root)
-	},
+// NewUpdateGitHubWorkflowCmd creates the "githubworkflow" command that updates
+// GitHub Actions versions in workflow files.
+func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
+	return &cobra.Command{
+		Use:   "githubworkflow [DIR]",
+		Short: "Update GitHub Actions in workflows to latest major versions",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root := "."
+			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+				root = args[0]
+			}
+			options := []vsc.GitHubClientOption{}
+			if tok := cfg.GitHubToken(); tok != "" {
+				options = append(options, vsc.WithAuthToken(tok))
+			}
+			return runGitHubUpdateWorkflow(cmd.Context(), vsc.NewGitHubClient(options...), root)
+		},
+	}
 }
 
+// runGitHubUpdateWorkflow scans the workflows directory and updates action
+// references in each workflow file.
 func runGitHubUpdateWorkflow(ctx context.Context, client *vsc.GitHubClient, root string) error {
 	workflowsDir := filepath.Join(root, ".github", "workflows")
 	entries, err := os.ReadDir(workflowsDir)
@@ -47,7 +50,7 @@ func runGitHubUpdateWorkflow(ctx context.Context, client *vsc.GitHubClient, root
 		return fmt.Errorf("read workflows dir: %w", err)
 	}
 
-	g := new(errgroup.Group)
+	var g errgroup.Group
 	for _, e := range entries {
 		if e.IsDir() {
 			continue
@@ -57,6 +60,8 @@ func runGitHubUpdateWorkflow(ctx context.Context, client *vsc.GitHubClient, root
 	return g.Wait()
 }
 
+// createUpdateGitHubWorkflowJob returns a task that updates a single workflow
+// file at the given path.
 func createUpdateGitHubWorkflowJob(
 	ctx context.Context,
 	client *vsc.GitHubClient,
@@ -71,6 +76,8 @@ func createUpdateGitHubWorkflowJob(
 	}
 }
 
+// createUpdateGitHubWorkflowPipeline builds a kyaml pipeline that rewrites a
+// workflow directory, skipping git-ignored files.
 func createUpdateGitHubWorkflowPipeline(
 	ctx context.Context,
 	client *vsc.GitHubClient,
@@ -96,6 +103,8 @@ func createUpdateGitHubWorkflowPipeline(
 	}
 }
 
+// createUpdateGitHubActionsFilter returns a filter that updates `uses:` entries
+// to the latest acceptable tags.
 func createUpdateGitHubActionsFilter(ctx context.Context, client *vsc.GitHubClient) kio.Filter {
 	return kio.FilterFunc(func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
 		for _, root := range nodes {
@@ -105,10 +114,11 @@ func createUpdateGitHubActionsFilter(ctx context.Context, client *vsc.GitHubClie
 	})
 }
 
+// processWorkflowNode updates all jobs and steps within a workflow YAML node.
 func processWorkflowNode(ctx context.Context, client *vsc.GitHubClient, root *yaml.RNode) error {
 	jobsNode, err := root.Pipe(yaml.Lookup("jobs"))
 	if err != nil {
-		slog.Warn("failed to lookup jobs", "error", err)
+		slog.Warn("failed to lookup jobs", "err", err)
 		return fmt.Errorf("lookup jobs: %w", err)
 	}
 	if jobsNode == nil {
@@ -118,18 +128,19 @@ func processWorkflowNode(ctx context.Context, client *vsc.GitHubClient, root *ya
 
 	jobNames, err := jobsNode.Fields()
 	if err != nil {
-		slog.Warn("failed to list jobs", "error", err)
+		slog.Warn("failed to list jobs", "err", err)
 		return fmt.Errorf("get job fields: %w", err)
 	}
 
 	for _, j := range jobNames {
 		if err := processJob(ctx, client, jobsNode, j); err != nil {
-			slog.Warn("job processing error", "job", j, "error", err)
+			slog.Warn("job processing error", "job", j, "err", err)
 		}
 	}
 	return nil
 }
 
+// processJob updates action versions used by steps of a single job.
 func processJob(
 	ctx context.Context,
 	client *vsc.GitHubClient,
@@ -148,10 +159,10 @@ func processJob(
 	}
 	stepElems, err := stepsNode.Elements()
 	if err != nil {
-		slog.Warn("failed to get steps", "job", jobName, "error", err)
+		slog.Warn("failed to get steps", "job", jobName, "err", err)
 		return fmt.Errorf("get steps: %w", err)
 	}
-	wg := new(errgroup.Group)
+	var wg errgroup.Group
 	for idx, step := range stepElems {
 		wg.Go(func() error {
 			return processStep(ctx, client, step, jobName, idx)
@@ -160,6 +171,7 @@ func processJob(
 	return wg.Wait()
 }
 
+// processStep updates a single step's `uses:` to a newer tag when available.
 func processStep(
 	ctx context.Context,
 	client *vsc.GitHubClient,
@@ -190,7 +202,7 @@ func processStep(
 			idx,
 			"uses",
 			curr,
-			"error",
+			"err",
 			err,
 		)
 		return nil
@@ -216,7 +228,7 @@ func processStep(
 			"failed to fetch latest tag with strategy",
 			"action",
 			actionRef.String(),
-			"error",
+			"err",
 			err,
 		)
 		return nil
@@ -239,7 +251,7 @@ func processStep(
 			jobName,
 			"action",
 			fmt.Sprintf("%s/%s", actionRef.Owner, actionRef.Repo),
-			"error",
+			"err",
 			err,
 		)
 		return fmt.Errorf("set uses for %s/%s: %w", actionRef.Owner, actionRef.Repo, err)

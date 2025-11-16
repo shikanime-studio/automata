@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -12,6 +13,12 @@ import (
 
 // ListTags fetches tags for the given image (auth keychain, fallback anonymous).
 func ListTags(imageRef *ImageRef) ([]string, error) {
+	if strings.Contains(imageRef.Name, ":") {
+		return nil, fmt.Errorf(
+			"invalid image name %q: repository must not include a tag; set tag in ImageRef.Tag",
+			imageRef.Name,
+		)
+	}
 	// Try with keychain, then fallback to anonymous; forward any provided crane options.
 	tags, err := crane.ListTags(
 		imageRef.Name,
@@ -31,7 +38,7 @@ func ListTags(imageRef *ImageRef) ([]string, error) {
 		)
 		if err != nil {
 			slog.Error("list tags failed", "image", imageRef.Name, "err", err)
-			return nil, err
+			return nil, fmt.Errorf("list tags for %s (anonymous): %w", imageRef.Name, err)
 		}
 	}
 	return tags, nil
@@ -116,9 +123,18 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 		// Skip any non-valid semver
 		var sem string
 		if o.transformRegex != nil {
+			slog.Debug("attempt semver transform", "tag", t, "regex", o.transformRegex.String())
 			sem, err = utils.ParseSemverWithRegex(o.transformRegex, t)
 			if err != nil {
-				slog.Debug("non-semver tag ignored by transform regex", "tag", t, "err", err)
+				slog.Debug(
+					"non-semver tag ignored",
+					"tag",
+					t,
+					"regex",
+					o.transformRegex.String(),
+					"err",
+					err,
+				)
 				continue
 			}
 		} else {

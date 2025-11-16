@@ -139,14 +139,23 @@ func (gc *GitHubClient) FindLatestActionTag(
 		var sem string
 		sem, err = utils.ParseSemver(*t.Name)
 		if err != nil {
-			slog.Debug("non-semver tag ignored", "tag", *t.Name, "err", err)
+			slog.DebugContext(
+				ctx,
+				"non-semver tag ignored",
+				"tag",
+				*t.Name,
+				"action",
+				action.String(),
+				"err",
+				err,
+			)
 			continue
 		}
 
 		// Prerelease tags are skipped if not explicitly included
 		if !o.includePreRelease {
 			if utils.PreRelease(sem) != "" {
-				slog.Debug("prerelease tag ignored", "tag", *t.Name, "sem", sem)
+				slog.DebugContext(ctx, "prerelease tag ignored", "tag", *t.Name, "sem", sem)
 				continue
 			}
 		}
@@ -157,13 +166,13 @@ func (gc *GitHubClient) FindLatestActionTag(
 			if utils.Major(sem) == baseline {
 				bestTag = *t.Name
 			} else {
-				slog.Debug("tag excluded by update strategy", "tag", *t.Name, "sem", sem, "baseline", baseline)
+				slog.DebugContext(ctx, "tag excluded by update strategy", "tag", *t.Name, "action", action.String(), "sem", sem, "baseline", baseline)
 			}
 		case utils.PatchUpdate:
 			if utils.MajorMinor(sem) == baseline {
 				bestTag = *t.Name
 			} else {
-				slog.Debug("tag excluded by update strategy", "tag", *t.Name, "sem", sem, "baseline", baseline)
+				slog.DebugContext(ctx, "tag excluded by update strategy", "tag", *t.Name, "action", action.String(), "sem", sem, "baseline", baseline)
 			}
 		default:
 			bestTag = *t.Name

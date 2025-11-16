@@ -12,6 +12,8 @@ type ImageRef struct {
 	Digest string
 }
 
+// String renders the image reference as `name[:tag][@digest]`, preferring the
+// digest form when present.
 func (i ImageRef) String() string {
 	if i.Digest != "" {
 		if i.Tag != "" {
