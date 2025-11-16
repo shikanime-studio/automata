@@ -147,7 +147,14 @@ func (gc *GitHubClient) FindLatestActionTag(
 		// Prerelease tags are skipped if not explicitly included
 		if !o.includePreRelease {
 			if utils.PreRelease(*t.Name) != "" {
-				slog.DebugContext(ctx, "prerelease tag ignored", "tag", *t.Name, "action", action.String())
+				slog.DebugContext(
+					ctx,
+					"prerelease tag ignored",
+					"tag",
+					*t.Name,
+					"action",
+					action.String(),
+				)
 				continue
 			}
 		}
