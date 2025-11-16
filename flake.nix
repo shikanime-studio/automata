@@ -40,38 +40,26 @@
       perSystem =
         {
           pkgs,
-          self,
+          self',
           system,
           ...
         }:
         {
           devenv.shells.default = {
+            imports = [
+              devlib.devenvModules.shikanime-studio
+            ];
             cachix = {
               enable = true;
               push = "shikanime";
             };
-            containers = pkgs.lib.mkForce { };
-            gitignore = {
-              enable = true;
-              enableDefaultTemplates = true;
-            };
-            github.enable = true;
-            languages = {
-              go.enable = true;
-              nix.enable = true;
-            };
+            languages.go.enable = true;
             packages = [
               pkgs.gh
               pkgs.sapling
               pkgs.sops
+              self'.packages.default
             ];
-            treefmt = {
-              enable = true;
-              config = {
-                enableDefaultExcludes = true;
-                programs.prettier.enable = true;
-              };
-            };
           };
 
           packages.default = pkgs.buildGoModule {
