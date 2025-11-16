@@ -41,9 +41,9 @@ func Compare(a, b string) int {
 // then canonicalizes it by reusing ParseSemver.
 func ParseSemverWithRegex(re *regexp.Regexp, v string) (string, error) {
 	m := re.FindStringSubmatch(v)
-	if m == nil {
-		return "", fmt.Errorf("no semver match in tag %q", v)
-	}
+    if m == nil {
+        return "", fmt.Errorf("no semver match in tag %q using regex %q", v, re.String())
+    }
 
 	raw := getSubexpValue(re, m, "version")
 	if raw == "" {

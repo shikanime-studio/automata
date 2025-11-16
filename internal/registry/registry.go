@@ -1,22 +1,26 @@
 package registry
 
 import (
-	"fmt"
-	"log/slog"
-	"regexp"
+    "fmt"
+    "log/slog"
+    "regexp"
+    "strings"
 
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/shikanime-studio/automata/internal/utils"
+    "github.com/google/go-containerregistry/pkg/authn"
+    "github.com/google/go-containerregistry/pkg/crane"
+    "github.com/shikanime-studio/automata/internal/utils"
 )
 
 // ListTags fetches tags for the given image (auth keychain, fallback anonymous).
 func ListTags(imageRef *ImageRef) ([]string, error) {
-	// Try with keychain, then fallback to anonymous; forward any provided crane options.
-	tags, err := crane.ListTags(
-		imageRef.Name,
-		crane.WithAuthFromKeychain(authn.DefaultKeychain),
-	)
+    if strings.Contains(imageRef.Name, ":") {
+        return nil, fmt.Errorf("invalid image name %q: repository must not include a tag; set tag in ImageRef.Tag", imageRef.Name)
+    }
+    // Try with keychain, then fallback to anonymous; forward any provided crane options.
+    tags, err := crane.ListTags(
+        imageRef.Name,
+        crane.WithAuthFromKeychain(authn.DefaultKeychain),
+    )
 	if err != nil {
 		slog.Debug(
 			"list tags with keychain failed, falling back to anonymous",
@@ -25,16 +29,16 @@ func ListTags(imageRef *ImageRef) ([]string, error) {
 			"err",
 			err,
 		)
-		tags, err = crane.ListTags(
-			imageRef.Name,
-			crane.WithAuth(authn.Anonymous),
-		)
-		if err != nil {
-			slog.Error("list tags failed", "image", imageRef.Name, "err", err)
-			return nil, err
-		}
-	}
-	return tags, nil
+        tags, err = crane.ListTags(
+            imageRef.Name,
+            crane.WithAuth(authn.Anonymous),
+        )
+        if err != nil {
+            slog.Error("list tags failed", "image", imageRef.Name, "err", err)
+            return nil, fmt.Errorf("list tags for %s (anonymous): %w", imageRef.Name, err)
+        }
+    }
+    return tags, nil
 }
 
 // FindLatestOption configures how FindLatestTag filters and selects a tag,
@@ -114,20 +118,21 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 	bestTag := ""
 	for _, t := range tags {
 		// Skip any non-valid semver
-		var sem string
-		if o.transformRegex != nil {
-			sem, err = utils.ParseSemverWithRegex(o.transformRegex, t)
-			if err != nil {
-				slog.Debug("non-semver tag ignored by transform regex", "tag", t, "err", err)
-				continue
-			}
-		} else {
-			sem, err = utils.ParseSemver(t)
-			if err != nil {
-				slog.Debug("non-semver tag ignored", "tag", t, "err", err)
-				continue
-			}
-		}
+        var sem string
+        if o.transformRegex != nil {
+            slog.Debug("attempt semver transform", "tag", t, "regex", o.transformRegex.String())
+            sem, err = utils.ParseSemverWithRegex(o.transformRegex, t)
+            if err != nil {
+                slog.Debug("non-semver tag ignored", "tag", t, "regex", o.transformRegex.String(), "err", err)
+                continue
+            }
+        } else {
+            sem, err = utils.ParseSemver(t)
+            if err != nil {
+                slog.Debug("non-semver tag ignored", "tag", t, "err", err)
+                continue
+            }
+        }
 
 		// Prerelease tags are skipped if not explicitly included
 		if !o.includePreRelease {

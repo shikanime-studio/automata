@@ -7,22 +7,24 @@ import (
 
 // ImageRef holds parsed components of an OCI image reference.
 type ImageRef struct {
-	Name   string
-	Tag    string
-	Digest string
+    Name   string
+    Tag    string
+    Digest string
 }
 
+// String renders the image reference as `name[:tag][@digest]`, preferring the
+// digest form when present.
 func (i ImageRef) String() string {
-	if i.Digest != "" {
-		if i.Tag != "" {
-			return fmt.Sprintf("%s:%s@%s", i.Name, i.Tag, i.Digest)
-		}
-		return fmt.Sprintf("%s@%s", i.Name, i.Digest)
-	}
-	if i.Tag != "" {
-		return fmt.Sprintf("%s:%s", i.Name, i.Tag)
-	}
-	return i.Name
+    if i.Digest != "" {
+        if i.Tag != "" {
+            return fmt.Sprintf("%s:%s@%s", i.Name, i.Tag, i.Digest)
+        }
+        return fmt.Sprintf("%s@%s", i.Name, i.Digest)
+    }
+    if i.Tag != "" {
+        return fmt.Sprintf("%s:%s", i.Name, i.Tag)
+    }
+    return i.Name
 }
 
 // ParseImageRef parses a Docker-style image reference string into ImageRef.

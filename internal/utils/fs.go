@@ -1,18 +1,20 @@
 package utils
 
 import (
-	"io/fs"
-	"os/exec"
-	"path/filepath"
+    "io/fs"
+    "os/exec"
+    "path/filepath"
 )
 
+// IsGitIgnored reports whether the given path is ignored by git relative to
+// the repository root.
 func IsGitIgnored(root, path string) bool {
-	cmd := exec.Command("git", "check-ignore", "-q", "--", path)
-	cmd.Dir = root
-	if err := cmd.Run(); err == nil {
-		return true
-	}
-	return false
+    cmd := exec.Command("git", "check-ignore", "-q", "--", path)
+    cmd.Dir = root
+    if err := cmd.Run(); err == nil {
+        return true
+    }
+    return false
 }
 
 // WalkDirWithGitignore walks `root` like `filepath.WalkDir`, skipping paths
