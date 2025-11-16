@@ -83,7 +83,9 @@ func createUpdateK0sctlFilter() kio.Filter {
 	return kio.FilterFunc(func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
 		for _, root := range nodes {
 			repos := map[string]string{}
-			reposNode, rErr := root.Pipe(yaml.Lookup("spec", "k0s", "config", "spec", "extensions", "helm", "repositories"))
+			reposNode, rErr := root.Pipe(
+				yaml.Lookup("spec", "k0s", "config", "spec", "extensions", "helm", "repositories"),
+			)
 			if rErr == nil {
 				rElems, rEErr := reposNode.Elements()
 				if rEErr == nil {
@@ -105,7 +107,9 @@ func createUpdateK0sctlFilter() kio.Filter {
 					}
 				}
 			}
-			chartsNode, cErr := root.Pipe(yaml.Lookup("spec", "k0s", "config", "spec", "extensions", "helm", "charts"))
+			chartsNode, cErr := root.Pipe(
+				yaml.Lookup("spec", "k0s", "config", "spec", "extensions", "helm", "charts"),
+			)
 			if cErr != nil {
 				slog.Warn("lookup charts failed", "err", cErr)
 			} else {

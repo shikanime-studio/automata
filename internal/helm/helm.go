@@ -58,7 +58,15 @@ func ListVersions(chart *ChartRef) ([]string, error) {
 		_ = exec.Command("helm", "repo", "remove", repoName).Run()
 		return nil, err
 	}
-	search := exec.Command("helm", "search", "repo", repoName+"/"+chart.Name, "--output", "json", "--versions")
+	search := exec.Command(
+		"helm",
+		"search",
+		"repo",
+		repoName+"/"+chart.Name,
+		"--output",
+		"json",
+		"--versions",
+	)
 	search.Env = os.Environ()
 	out, err := search.Output()
 	if err != nil {
