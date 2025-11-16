@@ -45,35 +45,56 @@ func ParseSemverWithRegex(re *regexp.Regexp, v string) (string, error) {
 		return "", fmt.Errorf("no semver match in tag %q", v)
 	}
 
-	versionIdx := re.SubexpIndex("version")
-	majorIdx := re.SubexpIndex("major")
-	minorIdx := re.SubexpIndex("minor")
-	patchIdx := re.SubexpIndex("patch")
-	prereleaseIdx := re.SubexpIndex("prerelease")
-	buildIdx := re.SubexpIndex("build")
-
-	matchedVersion := ""
-	if versionIdx >= 0 && versionIdx < len(m) && m[versionIdx] != "" {
-		matchedVersion = m[versionIdx]
-	} else if majorIdx >= 0 && minorIdx >= 0 && patchIdx >= 0 &&
-		majorIdx < len(m) && minorIdx < len(m) && patchIdx < len(m) &&
-		m[majorIdx] != "" && m[minorIdx] != "" && m[patchIdx] != "" {
-		matchedVersion = m[majorIdx] + "." + m[minorIdx] + "." + m[patchIdx]
-		if prereleaseIdx >= 0 && prereleaseIdx < len(m) && m[prereleaseIdx] != "" {
-			matchedVersion += "-" + m[prereleaseIdx]
+	raw := getSubexpValue(re, m, "version")
+	if raw != "" {
+		canon, err := ParseSemver(raw)
+		if err == nil {
+			return canon, nil
 		}
-		if buildIdx >= 0 && buildIdx < len(m) && m[buildIdx] != "" {
-			matchedVersion += "+" + m[buildIdx]
-		}
-	} else {
-		return "", fmt.Errorf("no version groups matched in tag %q", v)
 	}
 
-	canon, err := ParseSemver(matchedVersion)
+	built, ok := parseSemverWithRegex(re, m)
+	if !ok {
+		return "", fmt.Errorf("no version groups matched in tag %q", v)
+	}
+	canon, err := ParseSemver(built)
 	if err != nil {
 		return "", err
 	}
 	return canon, nil
+}
+
+func getSubexpValue(re *regexp.Regexp, m []string, name string) string {
+	idx := re.SubexpIndex(name)
+	if idx >= 0 && idx < len(m) {
+		return m[idx]
+	}
+	return ""
+}
+
+func parseSemverWithRegex(re *regexp.Regexp, m []string) (string, bool) {
+	maj := getSubexpValue(re, m, "major")
+	if maj == "" {
+		maj = "0"
+	}
+	min := getSubexpValue(re, m, "minor")
+	if min == "" {
+		min = "0"
+	}
+	pat := getSubexpValue(re, m, "patch")
+	if pat == "" {
+		pat = "0"
+	}
+	pre := getSubexpValue(re, m, "prerelease")
+	bld := getSubexpValue(re, m, "build")
+	s := maj + "." + min + "." + pat
+	if pre != "" {
+		s += "-" + pre
+	}
+	if bld != "" {
+		s += "+" + bld
+	}
+	return s, true
 }
 
 // NormalizeSemverPrefix normalizes a tag to have a leading 'v' and no 'V' prefix.
