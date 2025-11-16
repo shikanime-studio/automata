@@ -94,23 +94,17 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 		opt(o)
 	}
 
-	// Baseline from the current action version
-	baselineSem, err := utils.ParseSemver(imageRef.Tag)
-	if err != nil {
-		return "", fmt.Errorf("invalid baseline %q: %w", imageRef.Tag, err)
-	}
-
 	// Determine baseline according to update strategy
 	var baseline string
 	switch o.updateStrategy {
 	case utils.FullUpdate:
-		baseline = baselineSem
+		baseline = imageRef.Tag
 	case utils.MinorUpdate:
-		baseline = utils.Major(baselineSem)
+		baseline = utils.Major(imageRef.Tag)
 	case utils.PatchUpdate:
-		baseline = utils.MajorMinor(baselineSem)
+		baseline = utils.MajorMinor(imageRef.Tag)
 	default:
-		baseline = baselineSem
+		baseline = imageRef.Tag
 	}
 
 	tags, err := ListTags(imageRef)
@@ -135,12 +129,6 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 					"err",
 					err,
 				)
-				continue
-			}
-		} else {
-			sem, err = utils.ParseSemver(t)
-			if err != nil {
-				slog.Debug("non-semver tag ignored", "tag", t, "err", err)
 				continue
 			}
 		}
