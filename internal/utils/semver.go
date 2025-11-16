@@ -10,11 +10,11 @@ import (
 
 // ParseSemver parses a tag into canonical semver (with leading 'v') or returns an error.
 func ParseSemver(v string) (string, error) {
-	canon := semver.Canonical(NormalizeSemverPrefix(v))
-	if canon == "" {
+	vv := NormalizeSemverPrefix(v)
+	if !semver.IsValid(vv) {
 		return "", fmt.Errorf("invalid semver %q", v)
 	}
-	return canon, nil
+	return vv, nil
 }
 
 // Major returns the major version of a semver string.
@@ -49,7 +49,6 @@ func ParseSemverWithRegex(re *regexp.Regexp, v string) (string, error) {
 	if raw == "" {
 		raw = parseSemverWithRegex(re, m)
 	}
-
 	canon, err := ParseSemver(raw)
 	if err != nil {
 		return "", err
@@ -87,7 +86,7 @@ func parseSemverWithRegex(re *regexp.Regexp, m []string) string {
 	if bld != "" {
 		s += "+" + bld
 	}
-	return s
+	return fmt.Sprintf("v%s", s)
 }
 
 // NormalizeSemverPrefix normalizes a tag to have a leading 'v' and no 'V' prefix.

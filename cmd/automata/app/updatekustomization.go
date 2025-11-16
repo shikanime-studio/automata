@@ -167,6 +167,7 @@ func createUpdateImagesFilter() kio.Filter {
 					slog.Info("no matching tag found", "image", name)
 					continue
 				}
+
 				if err = img.PipeE(yaml.SetField("newTag", yaml.NewStringRNode(latest))); err != nil {
 					return nil, fmt.Errorf("set newTag for %s: %w", name, err)
 				}

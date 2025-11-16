@@ -151,10 +151,7 @@ func (gc *GitHubClient) FindLatestActionTag(
 			}
 		}
 
-		// Only consider tags strictly greater than baseline
-		if utils.Compare(sem, baseline) <= 0 {
-			continue
-		}
+		// Consider tags greater or more recent than baseline
 		switch o.updateStrategy {
 		case utils.MinorUpdate:
 			if utils.Major(sem) == baseline {

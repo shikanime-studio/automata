@@ -111,14 +111,14 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 		return "", fmt.Errorf("list tags: %w", err)
 	}
 
-	bestTag := imageRef.Tag
+	bestTag := ""
 	for _, t := range tags {
 		// Skip any non-valid semver
 		var sem string
 		if o.transformRegex != nil {
 			sem, err = utils.ParseSemverWithRegex(o.transformRegex, t)
 			if err != nil {
-				slog.Debug("non-semver tag ignored", "tag", t, "err", err)
+				slog.Debug("non-semver tag ignored by transform regex", "tag", t, "err", err)
 				continue
 			}
 		} else {
@@ -132,7 +132,7 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 		// Prerelease tags are skipped if not explicitly included
 		if !o.includePreRelease {
 			if utils.PreRelease(sem) != "" {
-				slog.Debug("prerelease tag ignored", "tag", t, "sem", sem)
+				slog.Debug("prerelease tag ignored by pre-release filter", "tag", t, "sem", sem)
 				continue
 			}
 		}
@@ -143,10 +143,7 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 			continue
 		}
 
-		// Apply update strategy filtering when baseline is set via WithCurrentVersion
-		if utils.Compare(sem, baseline) <= 0 {
-			continue
-		}
+		// Consider tags greater or more recent than baseline
 		switch o.updateStrategy {
 		case utils.MinorUpdate:
 			if utils.Major(sem) == baseline {
