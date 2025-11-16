@@ -137,34 +137,43 @@ func (gc *GitHubClient) FindLatestActionTag(
 	for _, t := range tags {
 		// Skip any non-valid semver
 		var sem string
-        sem, err = utils.ParseSemver(*t.Name)
-        if err != nil {
-            slog.DebugContext(ctx, "non-semver tag ignored", "tag", *t.Name, "action", action.String(), "err", err)
-            continue
-        }
+		sem, err = utils.ParseSemver(*t.Name)
+		if err != nil {
+			slog.DebugContext(
+				ctx,
+				"non-semver tag ignored",
+				"tag",
+				*t.Name,
+				"action",
+				action.String(),
+				"err",
+				err,
+			)
+			continue
+		}
 
 		// Prerelease tags are skipped if not explicitly included
 		if !o.includePreRelease {
-            if utils.PreRelease(sem) != "" {
-                slog.DebugContext(ctx, "prerelease tag ignored", "tag", *t.Name, "sem", sem)
-                continue
-            }
+			if utils.PreRelease(sem) != "" {
+				slog.DebugContext(ctx, "prerelease tag ignored", "tag", *t.Name, "sem", sem)
+				continue
+			}
 		}
 
 		// Consider tags greater or more recent than baseline
 		switch o.updateStrategy {
 		case utils.MinorUpdate:
-            if utils.Major(sem) == baseline {
-                bestTag = *t.Name
-            } else {
-                slog.DebugContext(ctx, "tag excluded by update strategy", "tag", *t.Name, "action", action.String(), "sem", sem, "baseline", baseline)
-            }
+			if utils.Major(sem) == baseline {
+				bestTag = *t.Name
+			} else {
+				slog.DebugContext(ctx, "tag excluded by update strategy", "tag", *t.Name, "action", action.String(), "sem", sem, "baseline", baseline)
+			}
 		case utils.PatchUpdate:
-            if utils.MajorMinor(sem) == baseline {
-                bestTag = *t.Name
-            } else {
-                slog.DebugContext(ctx, "tag excluded by update strategy", "tag", *t.Name, "action", action.String(), "sem", sem, "baseline", baseline)
-            }
+			if utils.MajorMinor(sem) == baseline {
+				bestTag = *t.Name
+			} else {
+				slog.DebugContext(ctx, "tag excluded by update strategy", "tag", *t.Name, "action", action.String(), "sem", sem, "baseline", baseline)
+			}
 		default:
 			bestTag = *t.Name
 		}

@@ -6,15 +6,15 @@ import (
 )
 
 type GitHubActionRef struct {
-    Owner   string
-    Repo    string
-    Version string
+	Owner   string
+	Repo    string
+	Version string
 }
 
 // String returns the canonical "owner/repo@version" form of the action
 // reference.
 func (a GitHubActionRef) String() string {
-    return fmt.Sprintf("%s/%s@%s", a.Owner, a.Repo, a.Version)
+	return fmt.Sprintf("%s/%s@%s", a.Owner, a.Repo, a.Version)
 }
 
 // ParseGitHubActionRef parses a GitHub Actions `uses` string like "owner/repo@v1".

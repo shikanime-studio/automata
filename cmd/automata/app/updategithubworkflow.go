@@ -1,40 +1,40 @@
 package app
 
 import (
-    "context"
-    "fmt"
-    "log/slog"
-    "os"
-    "path/filepath"
-    "strings"
+	"context"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 
-    "github.com/shikanime-studio/automata/internal/config"
-    "github.com/shikanime-studio/automata/internal/utils"
-    "github.com/shikanime-studio/automata/internal/vsc"
-    "github.com/spf13/cobra"
-    "golang.org/x/sync/errgroup"
-    "sigs.k8s.io/kustomize/kyaml/kio"
-    "sigs.k8s.io/kustomize/kyaml/yaml"
+	"github.com/shikanime-studio/automata/internal/config"
+	"github.com/shikanime-studio/automata/internal/utils"
+	"github.com/shikanime-studio/automata/internal/vsc"
+	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+	"sigs.k8s.io/kustomize/kyaml/kio"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 // NewUpdateGitHubWorkflowCmd creates the "githubworkflow" command that updates
 // GitHub Actions versions in workflow files.
 func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
-    return &cobra.Command{
-        Use:   "githubworkflow [DIR]",
-        Short: "Update GitHub Actions in workflows to latest major versions",
-        RunE: func(cmd *cobra.Command, args []string) error {
-            root := "."
-            if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-                root = args[0]
-            }
-            options := []vsc.GitHubClientOption{}
-            if tok := cfg.GitHubToken(); tok != "" {
-                options = append(options, vsc.WithAuthToken(tok))
-            }
-            return runGitHubUpdateWorkflow(cmd.Context(), vsc.NewGitHubClient(options...), root)
-        },
-    }
+	return &cobra.Command{
+		Use:   "githubworkflow [DIR]",
+		Short: "Update GitHub Actions in workflows to latest major versions",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root := "."
+			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+				root = args[0]
+			}
+			options := []vsc.GitHubClientOption{}
+			if tok := cfg.GitHubToken(); tok != "" {
+				options = append(options, vsc.WithAuthToken(tok))
+			}
+			return runGitHubUpdateWorkflow(cmd.Context(), vsc.NewGitHubClient(options...), root)
+		},
+	}
 }
 
 // runGitHubUpdateWorkflow scans the workflows directory and updates action
@@ -63,9 +63,9 @@ func runGitHubUpdateWorkflow(ctx context.Context, client *vsc.GitHubClient, root
 // createUpdateGitHubWorkflowJob returns a task that updates a single workflow
 // file at the given path.
 func createUpdateGitHubWorkflowJob(
-    ctx context.Context,
-    client *vsc.GitHubClient,
-    path string,
+	ctx context.Context,
+	client *vsc.GitHubClient,
+	path string,
 ) func() error {
 	return func() error {
 		if err := createUpdateGitHubWorkflowPipeline(ctx, client, path).Execute(); err != nil {
@@ -79,9 +79,9 @@ func createUpdateGitHubWorkflowJob(
 // createUpdateGitHubWorkflowPipeline builds a kyaml pipeline that rewrites a
 // workflow directory, skipping git-ignored files.
 func createUpdateGitHubWorkflowPipeline(
-    ctx context.Context,
-    client *vsc.GitHubClient,
-    path string,
+	ctx context.Context,
+	client *vsc.GitHubClient,
+	path string,
 ) kio.Pipeline {
 	return kio.Pipeline{
 		Inputs: []kio.Reader{
@@ -116,36 +116,36 @@ func createUpdateGitHubActionsFilter(ctx context.Context, client *vsc.GitHubClie
 
 // processWorkflowNode updates all jobs and steps within a workflow YAML node.
 func processWorkflowNode(ctx context.Context, client *vsc.GitHubClient, root *yaml.RNode) error {
-    jobsNode, err := root.Pipe(yaml.Lookup("jobs"))
-    if err != nil {
-        slog.Warn("failed to lookup jobs", "err", err)
-        return fmt.Errorf("lookup jobs: %w", err)
-    }
+	jobsNode, err := root.Pipe(yaml.Lookup("jobs"))
+	if err != nil {
+		slog.Warn("failed to lookup jobs", "err", err)
+		return fmt.Errorf("lookup jobs: %w", err)
+	}
 	if jobsNode == nil {
 		slog.Info("no jobs found")
 		return nil
 	}
 
-    jobNames, err := jobsNode.Fields()
-    if err != nil {
-        slog.Warn("failed to list jobs", "err", err)
-        return fmt.Errorf("get job fields: %w", err)
-    }
+	jobNames, err := jobsNode.Fields()
+	if err != nil {
+		slog.Warn("failed to list jobs", "err", err)
+		return fmt.Errorf("get job fields: %w", err)
+	}
 
 	for _, j := range jobNames {
-        if err := processJob(ctx, client, jobsNode, j); err != nil {
-            slog.Warn("job processing error", "job", j, "err", err)
-        }
+		if err := processJob(ctx, client, jobsNode, j); err != nil {
+			slog.Warn("job processing error", "job", j, "err", err)
+		}
 	}
 	return nil
 }
 
 // processJob updates action versions used by steps of a single job.
 func processJob(
-    ctx context.Context,
-    client *vsc.GitHubClient,
-    jobsNode *yaml.RNode,
-    jobName string,
+	ctx context.Context,
+	client *vsc.GitHubClient,
+	jobsNode *yaml.RNode,
+	jobName string,
 ) error {
 	jobNode, err := jobsNode.Pipe(yaml.Lookup(jobName))
 	if err != nil || jobNode == nil {
@@ -158,10 +158,10 @@ func processJob(
 		return nil
 	}
 	stepElems, err := stepsNode.Elements()
-    if err != nil {
-        slog.Warn("failed to get steps", "job", jobName, "err", err)
-        return fmt.Errorf("get steps: %w", err)
-    }
+	if err != nil {
+		slog.Warn("failed to get steps", "job", jobName, "err", err)
+		return fmt.Errorf("get steps: %w", err)
+	}
 	wg := new(errgroup.Group)
 	for idx, step := range stepElems {
 		wg.Go(func() error {
@@ -173,16 +173,16 @@ func processJob(
 
 // processStep updates a single step's `uses:` to a newer tag when available.
 func processStep(
-    ctx context.Context,
-    client *vsc.GitHubClient,
-    step *yaml.RNode,
-    jobName string,
-    idx int,
+	ctx context.Context,
+	client *vsc.GitHubClient,
+	step *yaml.RNode,
+	jobName string,
+	idx int,
 ) error {
 	usesNode, err := step.Pipe(yaml.Get("uses"))
-    if err != nil {
-        return fmt.Errorf("get uses: %w", err)
-    }
+	if err != nil {
+		return fmt.Errorf("get uses: %w", err)
+	}
 	if usesNode == nil {
 		return nil
 	}
@@ -194,19 +194,19 @@ func processStep(
 
 	actionRef, err := vsc.ParseGitHubActionRef(curr)
 	if err != nil {
-        slog.Info(
-            "non-versioned uses entry; skipping",
-            "job",
-            jobName,
-            "step_index",
-            idx,
-            "uses",
-            curr,
-            "err",
-            err,
-        )
-        return nil
-    }
+		slog.Info(
+			"non-versioned uses entry; skipping",
+			"job",
+			jobName,
+			"step_index",
+			idx,
+			"uses",
+			curr,
+			"err",
+			err,
+		)
+		return nil
+	}
 
 	// Maintain original behavior: skip versions containing '/'
 	if strings.Contains(actionRef.Version, "/") {
@@ -222,17 +222,17 @@ func processStep(
 		return nil
 	}
 
-    latest, err := client.FindLatestActionTag(ctx, actionRef)
-    if err != nil {
-        slog.Warn(
-            "failed to fetch latest tag with strategy",
-            "action",
-            actionRef.String(),
-            "err",
-            err,
-        )
-        return nil
-    }
+	latest, err := client.FindLatestActionTag(ctx, actionRef)
+	if err != nil {
+		slog.Warn(
+			"failed to fetch latest tag with strategy",
+			"action",
+			actionRef.String(),
+			"err",
+			err,
+		)
+		return nil
+	}
 	if latest == "" {
 		slog.Info("no suitable tag found", "action", actionRef.String())
 		return nil
@@ -244,18 +244,18 @@ func processStep(
 		Repo:    actionRef.Repo,
 		Version: latest,
 	}
-    if err := step.PipeE(yaml.SetField("uses", yaml.NewStringRNode(newActionRef.String()))); err != nil {
-        slog.Warn(
-            "failed to update uses",
-            "job",
-            jobName,
-            "action",
-            fmt.Sprintf("%s/%s", actionRef.Owner, actionRef.Repo),
-            "err",
-            err,
-        )
-        return fmt.Errorf("set uses for %s/%s: %w", actionRef.Owner, actionRef.Repo, err)
-    }
+	if err := step.PipeE(yaml.SetField("uses", yaml.NewStringRNode(newActionRef.String()))); err != nil {
+		slog.Warn(
+			"failed to update uses",
+			"job",
+			jobName,
+			"action",
+			fmt.Sprintf("%s/%s", actionRef.Owner, actionRef.Repo),
+			"err",
+			err,
+		)
+		return fmt.Errorf("set uses for %s/%s: %w", actionRef.Owner, actionRef.Repo, err)
+	}
 	slog.Info(
 		"updated action",
 		"job",

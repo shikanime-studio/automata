@@ -19,17 +19,17 @@ import (
 // It scans for kustomization.yaml files and updates image tags based on
 // the images annotation configuration and chosen registry strategy.
 func NewUpdateKustomizationCmd() *cobra.Command {
-    return &cobra.Command{
-        Use:   "kustomization [DIR]",
-        Short: "Update kustomize image tags",
-        RunE: func(cmd *cobra.Command, args []string) error {
-            root := "."
-            if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-                root = args[0]
-            }
-            return runUpdateKustomization(root)
-        },
-    }
+	return &cobra.Command{
+		Use:   "kustomization [DIR]",
+		Short: "Update kustomize image tags",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root := "."
+			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+				root = args[0]
+			}
+			return runUpdateKustomization(root)
+		},
+	}
 }
 
 // runUpdateKustomization executes the kustomization update across the directory tree.
