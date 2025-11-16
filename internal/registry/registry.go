@@ -14,14 +14,14 @@ import (
 func ListTags(imageRef *ImageRef) ([]string, error) {
 	// Try with keychain, then fallback to anonymous; forward any provided crane options.
 	tags, err := crane.ListTags(
-		imageRef.String(),
+		imageRef.Name,
 		crane.WithAuthFromKeychain(authn.DefaultKeychain),
 	)
 	if err != nil {
 		slog.Debug(
 			"list tags with keychain failed, falling back to anonymous",
 			"image",
-			imageRef.String(),
+			imageRef.Name,
 			"err",
 			err,
 		)
@@ -30,7 +30,7 @@ func ListTags(imageRef *ImageRef) ([]string, error) {
 			crane.WithAuth(authn.Anonymous),
 		)
 		if err != nil {
-			slog.Error("list tags failed", "image", imageRef.String(), "err", err)
+			slog.Error("list tags failed", "image", imageRef.Name, "err", err)
 			return nil, err
 		}
 	}
@@ -111,7 +111,7 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 		return "", fmt.Errorf("list tags: %w", err)
 	}
 
-	bestTag := ""
+	bestTag := imageRef.Tag
 	for _, t := range tags {
 		// Skip any non-valid semver
 		var sem string
