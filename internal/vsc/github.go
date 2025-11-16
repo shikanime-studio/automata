@@ -109,23 +109,17 @@ func (gc *GitHubClient) FindLatestActionTag(
 		return "", fmt.Errorf("rate limiter: %w", err)
 	}
 
-	// Baseline from the current action version
-	baselineSem, err := utils.ParseSemver(action.Version)
-	if err != nil {
-		return "", fmt.Errorf("invalid baseline %q: %w", action.Version, err)
-	}
-
 	// Determine baseline according to update strategy
 	var baseline string
 	switch o.updateStrategy {
 	case utils.FullUpdate:
-		baseline = baselineSem
+		baseline = action.Version
 	case utils.MinorUpdate:
-		baseline = utils.Major(baselineSem)
+		baseline = utils.Major(action.Version)
 	case utils.PatchUpdate:
-		baseline = utils.MajorMinor(baselineSem)
+		baseline = utils.MajorMinor(action.Version)
 	default:
-		baseline = baselineSem
+		baseline = action.Version
 	}
 
 	tags, _, err := gc.c.Repositories.ListTags(ctx, action.Owner, action.Repo, nil)
@@ -136,8 +130,6 @@ func (gc *GitHubClient) FindLatestActionTag(
 	bestTag := ""
 	for _, t := range tags {
 		// Skip any non-valid semver
-		var sem string
-		sem, err = utils.ParseSemver(*t.Name)
 		if err != nil {
 			slog.DebugContext(
 				ctx,
@@ -154,8 +146,15 @@ func (gc *GitHubClient) FindLatestActionTag(
 
 		// Prerelease tags are skipped if not explicitly included
 		if !o.includePreRelease {
-			if utils.PreRelease(sem) != "" {
-				slog.DebugContext(ctx, "prerelease tag ignored", "tag", *t.Name, "sem", sem)
+			if utils.PreRelease(*t.Name) != "" {
+				slog.DebugContext(
+					ctx,
+					"prerelease tag ignored",
+					"tag",
+					*t.Name,
+					"action",
+					action.String(),
+				)
 				continue
 			}
 		}
@@ -163,16 +162,16 @@ func (gc *GitHubClient) FindLatestActionTag(
 		// Consider tags greater or more recent than baseline
 		switch o.updateStrategy {
 		case utils.MinorUpdate:
-			if utils.Major(sem) == baseline {
+			if utils.Major(*t.Name) == baseline {
 				bestTag = *t.Name
 			} else {
-				slog.DebugContext(ctx, "tag excluded by update strategy", "tag", *t.Name, "action", action.String(), "sem", sem, "baseline", baseline)
+				slog.DebugContext(ctx, "tag excluded by update strategy", "tag", *t.Name, "action", action.String(), "baseline", baseline)
 			}
 		case utils.PatchUpdate:
-			if utils.MajorMinor(sem) == baseline {
+			if utils.MajorMinor(*t.Name) == baseline {
 				bestTag = *t.Name
 			} else {
-				slog.DebugContext(ctx, "tag excluded by update strategy", "tag", *t.Name, "action", action.String(), "sem", sem, "baseline", baseline)
+				slog.DebugContext(ctx, "tag excluded by update strategy", "tag", *t.Name, "action", action.String(), "baseline", baseline)
 			}
 		default:
 			bestTag = *t.Name

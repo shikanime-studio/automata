@@ -262,10 +262,8 @@ func createUpdateLabelsFilter() kio.Filter {
 						if err != nil {
 							return nil, fmt.Errorf("parse semver for %s: %w", latest, err)
 						}
-					} else {
-						vers = latest
 					}
-					if err = root.PipeE(utils.SetRecommandedLabels(name, vers)); err != nil {
+					if err = root.PipeE(utils.SetRecommandedLabels(name, utils.Canonical(vers))); err != nil {
 						return nil, fmt.Errorf("set %s: %w", utils.KubernetesVersionLabel, err)
 					}
 					slog.Info(

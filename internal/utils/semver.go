@@ -8,13 +8,18 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// ParseSemver parses a tag into canonical semver (with leading 'v') or returns an error.
-func ParseSemver(v string) (string, error) {
+// Semver parses a tag into canonical semver (with leading 'v') or returns an error.
+func Semver(v string) (string, error) {
 	vv := NormalizeSemverPrefix(v)
 	if !semver.IsValid(vv) {
 		return "", fmt.Errorf("invalid semver %q", v)
 	}
 	return vv, nil
+}
+
+// Canonical returns the canonical semver string (with leading 'v').
+func Canonical(v string) string {
+	return semver.Canonical(NormalizeSemverPrefix(v))
 }
 
 // Major returns the major version of a semver string.
@@ -47,13 +52,9 @@ func ParseSemverWithRegex(re *regexp.Regexp, v string) (string, error) {
 
 	raw := getSubexpValue(re, m, "version")
 	if raw == "" {
-		raw = parseSemverWithRegex(re, m)
+		return parseSemverWithRegex(re, m), nil
 	}
-	canon, err := ParseSemver(raw)
-	if err != nil {
-		return "", err
-	}
-	return canon, nil
+	return raw, nil
 }
 
 func getSubexpValue(re *regexp.Regexp, m []string, name string) string {
