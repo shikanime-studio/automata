@@ -78,6 +78,14 @@ type findLatestActionOptions struct {
 	includePreRelease bool
 }
 
+func makeFindLatestActionOptions(opts ...FindLatestActionOption) *findLatestActionOptions {
+	o := &findLatestActionOptions{updateStrategy: utils.FullUpdate}
+	for _, opt := range opts {
+		opt(o)
+	}
+	return o
+}
+
 // WithActionStrategyType sets the tag update strategy (full, minor-only, patch-only)
 // used by FindLatestActionTag relative to the baseline action version.
 func WithActionStrategyType(strategy utils.StrategyType) FindLatestActionOption {
@@ -100,10 +108,7 @@ func (gc *GitHubClient) FindLatestActionTag(
 	action *GitHubActionRef,
 	opts ...FindLatestActionOption,
 ) (string, error) {
-	o := &findLatestActionOptions{updateStrategy: utils.FullUpdate}
-	for _, opt := range opts {
-		opt(o)
-	}
+	o := makeFindLatestActionOptions(opts...)
 
 	if err := gc.l.Wait(ctx); err != nil {
 		return "", fmt.Errorf("rate limiter: %w", err)

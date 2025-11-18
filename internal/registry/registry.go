@@ -55,6 +55,14 @@ type findLatestOptions struct {
 	includePreRelease bool
 }
 
+func makeFindLatestOptions(opts ...FindLatestOption) *findLatestOptions {
+	o := &findLatestOptions{updateStrategy: utils.FullUpdate}
+	for _, opt := range opts {
+		opt(o)
+	}
+	return o
+}
+
 // WithExclude sets the exclusion list for tags. Any tag present in the map
 // will be ignored when selecting the latest tag.
 func WithExclude(exclude map[string]struct{}) FindLatestOption {
@@ -89,10 +97,7 @@ func WithPreRelease(include bool) FindLatestOption {
 
 // FindLatestTag returns the latest tag for the given image based on the provided options.
 func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error) {
-	o := &findLatestOptions{updateStrategy: utils.FullUpdate}
-	for _, opt := range opts {
-		opt(o)
-	}
+	o := makeFindLatestOptions(opts...)
 
 	// Determine baseline according to update strategy
 	var baseline string
