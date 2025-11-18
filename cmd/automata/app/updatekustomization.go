@@ -146,7 +146,6 @@ func createUpdateImagesFilter() kio.Filter {
 					Name: yaml.GetValue(newNameNode),
 				}
 
-				// Set base version if current newTag is a valid semver
 				currentTagNode, err := img.Pipe(yaml.Get("newTag"))
 				if err != nil {
 					return nil, fmt.Errorf("get current newTag for %s: %w", name, err)

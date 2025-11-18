@@ -129,21 +129,6 @@ func (gc *GitHubClient) FindLatestActionTag(
 
 	bestTag := ""
 	for _, t := range tags {
-		// Skip any non-valid semver
-		if err != nil {
-			slog.DebugContext(
-				ctx,
-				"non-semver tag ignored",
-				"tag",
-				*t.Name,
-				"action",
-				action.String(),
-				"err",
-				err,
-			)
-			continue
-		}
-
 		// Prerelease tags are skipped if not explicitly included
 		if !o.includePreRelease {
 			if utils.PreRelease(*t.Name) != "" {

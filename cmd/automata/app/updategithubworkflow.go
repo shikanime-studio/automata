@@ -208,20 +208,6 @@ func processStep(
 		return nil
 	}
 
-	// Maintain original behavior: skip versions containing '/'
-	if strings.Contains(actionRef.Version, "/") {
-		slog.Info(
-			"skip uses with slash in version",
-			"job",
-			jobName,
-			"action",
-			fmt.Sprintf("%s/%s", actionRef.Owner, actionRef.Repo),
-			"version",
-			actionRef.Version,
-		)
-		return nil
-	}
-
 	latest, err := client.FindLatestActionTag(ctx, actionRef)
 	if err != nil {
 		slog.Warn(
@@ -238,7 +224,6 @@ func processStep(
 		return nil
 	}
 
-	// Replace inline fmt.Sprintf with GitHubActionRef.String()
 	newActionRef := vsc.GitHubActionRef{
 		Owner:   actionRef.Owner,
 		Repo:    actionRef.Repo,
