@@ -38,21 +38,12 @@
         treefmt-nix.flakeModule
       ];
       perSystem =
-        {
-          self',
-          pkgs,
-          lib,
-          ...
-        }:
+        { pkgs, lib, ... }:
         {
           devenv.shells.default = {
             imports = [
               devlib.devenvModules.shikanime-studio
             ];
-            cachix = {
-              enable = true;
-              push = "shikanime";
-            };
             languages.go.enable = true;
             packages = [
               pkgs.gh
