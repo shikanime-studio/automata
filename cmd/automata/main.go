@@ -11,21 +11,38 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// init configures the global logger using values from the application
+// configuration.
 func init() {
-	slog.SetDefault(slog.New(slog.NewTextHandler(
-		os.Stderr,
-		&slog.HandlerOptions{Level: config.GetLogLevel()},
-	)))
+	cfg := config.New()
+	if err := cfg.Bind(); err != nil {
+		slog.Error("failed to bind config", "err", err)
+		os.Exit(1)
+	}
+	opts := &slog.HandlerOptions{Level: cfg.LogLevel(), AddSource: cfg.LogSource()}
+	var h slog.Handler
+	if cfg.LogFormat() == "json" {
+		h = slog.NewJSONHandler(os.Stderr, opts)
+	} else {
+		h = slog.NewTextHandler(os.Stderr, opts)
+	}
+	slog.SetDefault(slog.New(h))
 }
 
+// main constructs the root Cobra command, wires subcommands, and executes it.
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "automata",
 		Short: "Automata CLI",
 	}
-	rootCmd.AddCommand(app.UpdateCmd)
+	cfg := config.New()
+	if err := cfg.Bind(); err != nil {
+		slog.Error("failed to bind config", "err", err)
+		os.Exit(1)
+	}
+	rootCmd.AddCommand(app.NewUpdateCmd(cfg))
 	if err := rootCmd.Execute(); err != nil {
-		slog.Error("command execution failed", "error", err)
+		slog.Error("command execution failed", "err", err)
 		os.Exit(1)
 	}
 }

@@ -8,13 +8,18 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// ParseSemver parses a tag into canonical semver (with leading 'v') or returns an error.
-func ParseSemver(v string) (string, error) {
-	canon := semver.Canonical(NormalizeSemverPrefix(v))
-	if canon == "" {
+// Semver parses a tag into canonical semver (with leading 'v') or returns an error.
+func Semver(v string) (string, error) {
+	vv := NormalizeSemverPrefix(v)
+	if !semver.IsValid(vv) {
 		return "", fmt.Errorf("invalid semver %q", v)
 	}
-	return canon, nil
+	return vv, nil
+}
+
+// Canonical returns the canonical semver string (with leading 'v').
+func Canonical(v string) string {
+	return semver.Canonical(NormalizeSemverPrefix(v))
 }
 
 // Major returns the major version of a semver string.
@@ -42,38 +47,47 @@ func Compare(a, b string) int {
 func ParseSemverWithRegex(re *regexp.Regexp, v string) (string, error) {
 	m := re.FindStringSubmatch(v)
 	if m == nil {
-		return "", fmt.Errorf("no semver match in tag %q", v)
+		return "", fmt.Errorf("no semver match in tag %q using regex %q", v, re.String())
 	}
 
-	versionIdx := re.SubexpIndex("version")
-	majorIdx := re.SubexpIndex("major")
-	minorIdx := re.SubexpIndex("minor")
-	patchIdx := re.SubexpIndex("patch")
-	prereleaseIdx := re.SubexpIndex("prerelease")
-	buildIdx := re.SubexpIndex("build")
-
-	matchedVersion := ""
-	if versionIdx >= 0 && versionIdx < len(m) && m[versionIdx] != "" {
-		matchedVersion = m[versionIdx]
-	} else if majorIdx >= 0 && minorIdx >= 0 && patchIdx >= 0 &&
-		majorIdx < len(m) && minorIdx < len(m) && patchIdx < len(m) &&
-		m[majorIdx] != "" && m[minorIdx] != "" && m[patchIdx] != "" {
-		matchedVersion = m[majorIdx] + "." + m[minorIdx] + "." + m[patchIdx]
-		if prereleaseIdx >= 0 && prereleaseIdx < len(m) && m[prereleaseIdx] != "" {
-			matchedVersion += "-" + m[prereleaseIdx]
-		}
-		if buildIdx >= 0 && buildIdx < len(m) && m[buildIdx] != "" {
-			matchedVersion += "+" + m[buildIdx]
-		}
-	} else {
-		return "", fmt.Errorf("no version groups matched in tag %q", v)
+	raw := getSubexpValue(re, m, "version")
+	if raw == "" {
+		return parseSemverWithRegex(re, m), nil
 	}
+	return raw, nil
+}
 
-	canon, err := ParseSemver(matchedVersion)
-	if err != nil {
-		return "", err
+func getSubexpValue(re *regexp.Regexp, m []string, name string) string {
+	idx := re.SubexpIndex(name)
+	if idx >= 0 && idx < len(m) {
+		return m[idx]
 	}
-	return canon, nil
+	return ""
+}
+
+func parseSemverWithRegex(re *regexp.Regexp, m []string) string {
+	maj := getSubexpValue(re, m, "major")
+	if maj == "" {
+		maj = "0"
+	}
+	min := getSubexpValue(re, m, "minor")
+	if min == "" {
+		min = "0"
+	}
+	pat := getSubexpValue(re, m, "patch")
+	if pat == "" {
+		pat = "0"
+	}
+	pre := getSubexpValue(re, m, "prerelease")
+	bld := getSubexpValue(re, m, "build")
+	s := maj + "." + min + "." + pat
+	if pre != "" {
+		s += "-" + pre
+	}
+	if bld != "" {
+		s += "+" + bld
+	}
+	return fmt.Sprintf("v%s", s)
 }
 
 // NormalizeSemverPrefix normalizes a tag to have a leading 'v' and no 'V' prefix.

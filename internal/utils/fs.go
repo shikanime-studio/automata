@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 )
 
+// IsGitIgnored reports whether the given path is ignored by git relative to
+// the repository root.
 func IsGitIgnored(root, path string) bool {
 	cmd := exec.Command("git", "check-ignore", "-q", "--", path)
 	cmd.Dir = root

@@ -18,21 +18,23 @@ import (
 // UpdateKustomizationCmd updates kustomize image tags across a directory tree.
 // It scans for kustomization.yaml files and updates image tags based on
 // the images annotation configuration and chosen registry strategy.
-var UpdateKustomizationCmd = &cobra.Command{
-	Use:   "kustomization [DIR]",
-	Short: "Update kustomize image tags",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		root := "."
-		if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-			root = args[0]
-		}
-		return runUpdateKustomization(root)
-	},
+func NewUpdateKustomizationCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "kustomization [DIR]",
+		Short: "Update kustomize image tags",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root := "."
+			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+				root = args[0]
+			}
+			return runUpdateKustomization(root)
+		},
+	}
 }
 
 // runUpdateKustomization executes the kustomization update across the directory tree.
 func runUpdateKustomization(root string) error {
-	g := new(errgroup.Group)
+	var g errgroup.Group
 	if err := utils.WalkDirWithGitignore(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -144,7 +146,6 @@ func createUpdateImagesFilter() kio.Filter {
 					Name: yaml.GetValue(newNameNode),
 				}
 
-				// Set base version if current newTag is a valid semver
 				currentTagNode, err := img.Pipe(yaml.Get("newTag"))
 				if err != nil {
 					return nil, fmt.Errorf("get current newTag for %s: %w", name, err)
@@ -260,10 +261,8 @@ func createUpdateLabelsFilter() kio.Filter {
 						if err != nil {
 							return nil, fmt.Errorf("parse semver for %s: %w", latest, err)
 						}
-					} else {
-						vers = latest
 					}
-					if err = root.PipeE(utils.SetRecommandedLabels(name, vers)); err != nil {
+					if err = root.PipeE(utils.SetRecommandedLabels(name, utils.Canonical(vers))); err != nil {
 						return nil, fmt.Errorf("set %s: %w", utils.KubernetesVersionLabel, err)
 					}
 					slog.Info(
