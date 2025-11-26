@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
+// NewUpdateK0sctlCmd updates k0sctl clusters with the latest chart versions.
 func NewUpdateK0sctlCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "k0sctl [DIR]",

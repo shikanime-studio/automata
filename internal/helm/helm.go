@@ -26,6 +26,14 @@ type findLatestOptions struct {
 	includePreRelease bool
 }
 
+func makeFindLatestOptions(opts ...FindLatestOption) *findLatestOptions {
+	o := &findLatestOptions{updateStrategy: utils.FullUpdate}
+	for _, opt := range opts {
+		opt(o)
+	}
+	return o
+}
+
 func WithExclude(exclude map[string]struct{}) FindLatestOption {
 	return func(o *findLatestOptions) {
 		o.exclude = exclude
@@ -90,10 +98,7 @@ func ListVersions(chart *ChartRef) ([]string, error) {
 }
 
 func FindLatestVersion(chart *ChartRef, opts ...FindLatestOption) (string, error) {
-	o := &findLatestOptions{updateStrategy: utils.FullUpdate}
-	for _, opt := range opts {
-		opt(o)
-	}
+	o := makeFindLatestOptions(opts...)
 
 	baselineSem, err := utils.ParseSemver(chart.Version)
 	if err != nil {
