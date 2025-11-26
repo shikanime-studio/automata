@@ -17,9 +17,6 @@ func Semver(v string) (string, error) {
 	return vv, nil
 }
 
-// ParseSemver is an alias kept for backward compatibility.
-func ParseSemver(v string) (string, error) { return Semver(v) }
-
 // Canonical returns the canonical semver string (with leading 'v').
 func Canonical(v string) string {
 	return semver.Canonical(NormalizeSemverPrefix(v))

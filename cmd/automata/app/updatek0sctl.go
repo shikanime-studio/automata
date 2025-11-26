@@ -221,6 +221,10 @@ func lastSegment(s string) string {
 }
 
 func isK0sctlCluster(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext != ".yaml" && ext != ".yml" {
+		return false
+	}
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return false

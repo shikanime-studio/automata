@@ -1,3 +1,4 @@
+// Package helm provides helpers to query Helm repositories and resolve chart versions.
 package helm
 
 import (
@@ -7,17 +8,18 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/shikanime-studio/automata/internal/utils"
 )
 
+// ChartRef identifies a Helm chart by repository URL, chart name, and version.
 type ChartRef struct {
 	RepoURL string
 	Name    string
 	Version string
 }
 
+// FindLatestOption configures the behavior of FindLatestVersion.
 type FindLatestOption func(*findLatestOptions)
 
 type findLatestOptions struct {
@@ -34,26 +36,30 @@ func makeFindLatestOptions(opts ...FindLatestOption) *findLatestOptions {
 	return o
 }
 
+// WithExclude excludes exact chart versions from consideration.
 func WithExclude(exclude map[string]struct{}) FindLatestOption {
 	return func(o *findLatestOptions) {
 		o.exclude = exclude
 	}
 }
 
+// WithStrategyType sets the update strategy (full/minor/patch).
 func WithStrategyType(strategy utils.StrategyType) FindLatestOption {
 	return func(o *findLatestOptions) {
 		o.updateStrategy = strategy
 	}
 }
 
+// WithPreRelease includes prerelease versions when true.
 func WithPreRelease(include bool) FindLatestOption {
 	return func(o *findLatestOptions) {
 		o.includePreRelease = include
 	}
 }
 
+// ListVersions returns all versions available for the given chart in the repo.
 func ListVersions(chart *ChartRef) ([]string, error) {
-	repoName := fmt.Sprintf("temp-%s-%d", sanitizeRepoName(chart.RepoURL), time.Now().UnixNano())
+	repoName := sanitizeRepoName(chart.RepoURL)
 	add := exec.Command("helm", "repo", "add", repoName, chart.RepoURL, "--force-update")
 	add.Env = os.Environ()
 	if out, err := add.CombinedOutput(); err != nil {
@@ -97,10 +103,11 @@ func ListVersions(chart *ChartRef) ([]string, error) {
 	return vers, nil
 }
 
+// FindLatestVersion chooses the best matching version according to options.
 func FindLatestVersion(chart *ChartRef, opts ...FindLatestOption) (string, error) {
 	o := makeFindLatestOptions(opts...)
 
-	baselineSem, err := utils.ParseSemver(chart.Version)
+	baselineSem, err := utils.Semver(chart.Version)
 	if err != nil {
 		return "", fmt.Errorf("invalid baseline %q: %w", chart.Version, err)
 	}
@@ -126,7 +133,7 @@ func FindLatestVersion(chart *ChartRef, opts ...FindLatestOption) (string, error
 	bestSem := ""
 	for _, v := range vers {
 		var sem string
-		sem, err = utils.ParseSemver(v)
+		sem, err = utils.Semver(v)
 		if err != nil {
 			slog.Debug("non-semver chart version ignored", "version", v, "err", err)
 			continue

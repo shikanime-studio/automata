@@ -1,3 +1,4 @@
+// Package container provides helpers for parsing and formatting OCI image references.
 package container
 
 import (
