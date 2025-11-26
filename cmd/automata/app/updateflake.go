@@ -63,13 +63,13 @@ func runUpdateFlake(root string) error {
 		cmd.Dir = dir
 		cmd.Env = os.Environ()
 
-		out, runErr := cmd.CombinedOutput()
+		out, err := cmd.CombinedOutput()
 		if len(out) > 0 {
 			slog.Info("nix flake update output", "dir", dir, "output", string(out))
 		}
-		if runErr != nil {
-			slog.Warn("nix flake update failed", "dir", dir, "err", runErr)
-			return fmt.Errorf("nix flake update in %s: %w", dir, runErr)
+		if err != nil {
+			slog.Warn("nix flake update failed", "dir", dir, "err", err)
+			return fmt.Errorf("nix flake update in %s: %w", dir, err)
 		}
 		slog.Info("nix flake update completed", "dir", dir)
 	}

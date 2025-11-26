@@ -64,13 +64,13 @@ func runUpdateScript(root string) error {
 		cmd.Dir = dir
 		cmd.Env = os.Environ()
 
-		out, runErr := cmd.CombinedOutput()
+		out, err := cmd.CombinedOutput()
 		if len(out) > 0 {
 			slog.Info("update.sh output", "script", script, "output", string(out))
 		}
-		if runErr != nil {
-			slog.Warn("update.sh failed", "script", script, "err", runErr)
-			return fmt.Errorf("run %s: %w", script, runErr)
+		if err != nil {
+			slog.Warn("update.sh failed", "script", script, "err", err)
+			return fmt.Errorf("run %s: %w", script, err)
 		}
 		slog.Info("update script completed", "script", script)
 	}
