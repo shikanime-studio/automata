@@ -10,20 +10,15 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func dirValidArgsFunc(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return nil, cobra.ShellCompDirectiveFilterDirs
-}
-
 // NewUpdateCmd creates the umbrella "update" command and wires its
 // subcommands. When invoked without flags, it shows help; with `--all`, it runs
 // all update operations.
 func NewUpdateCmd(cfg *config.Config) *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
-		Use:               "update [DIR]",
-		Short:             "Update resources",
-		Args:              cobra.MaximumNArgs(1),
-		ValidArgsFunction: dirValidArgsFunc,
+		Use:   "update [DIR]",
+		Short: "Update resources",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !all {
 				return cmd.Help()
