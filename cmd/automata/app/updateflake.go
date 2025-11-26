@@ -14,18 +14,23 @@ import (
 
 // NewUpdateFlakeCmd runs `nix flake update` for directories containing flake.nix.
 func NewUpdateFlakeCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "flake [DIR]",
-		Short: "Run nix flake update where flake.nix exists",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			root := "."
-			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-				root = args[0]
-			}
-			return runUpdateFlake(root)
-		},
-	}
+    return &cobra.Command{
+        Use:   "flake DIR...",
+        Short: "Run nix flake update where flake.nix exists",
+        Args:  cobra.MinimumNArgs(1),
+        RunE: func(_ *cobra.Command, args []string) error {
+            for _, a := range args {
+                root := strings.TrimSpace(a)
+                if root == "" {
+                    continue
+                }
+                if err := runUpdateFlake(root); err != nil {
+                    return err
+                }
+            }
+            return nil
+        },
+    }
 }
 
 // runUpdateFlake walks the directory tree and executes `nix flake update` for each found flake.nix.
