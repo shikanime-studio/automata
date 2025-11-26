@@ -16,16 +16,18 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-var UpdateK0sctlCmd = &cobra.Command{
-	Use:   "k0sctl [DIR]",
-	Short: "Update k0sctl with latest chart versions",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		root := "."
-		if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-			root = args[0]
-		}
-		return runUpdateK0sctl(root)
-	},
+func NewUpdateK0sctlCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "k0sctl [DIR]",
+		Short: "Update k0sctl with latest chart versions",
+		RunE: func(_ *cobra.Command, args []string) error {
+			root := "."
+			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+				root = args[0]
+			}
+			return runUpdateK0sctl(root)
+		},
+	}
 }
 
 func runUpdateK0sctl(root string) error {

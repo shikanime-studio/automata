@@ -12,17 +12,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// UpdateScriptCmd runs all update.sh scripts found under the provided directory.
-var UpdateScriptCmd = &cobra.Command{
-	Use:   "updatescript [DIR]",
-	Short: "Run all update.sh scripts",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		root := "."
-		if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-			root = args[0]
-		}
-		return runUpdateScript(root)
-	},
+// NewUpdateScriptCmd runs all update.sh scripts found under the provided directory.
+func NewUpdateScriptCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "updatescript [DIR]",
+		Short: "Run all update.sh scripts",
+		RunE: func(_ *cobra.Command, args []string) error {
+			root := "."
+			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+				root = args[0]
+			}
+			return runUpdateScript(root)
+		},
+	}
 }
 
 // runUpdateScript walks the directory tree starting at root and executes every update.sh found.
@@ -61,7 +63,7 @@ func runUpdateScript(root string) error {
 			slog.Info("update.sh output", "script", script, "output", string(out))
 		}
 		if runErr != nil {
-			slog.Warn("update.sh failed", "script", script, "error", runErr)
+			slog.Warn("update.sh failed", "script", script, "err", runErr)
 			return fmt.Errorf("run %s: %w", script, runErr)
 		}
 		slog.Info("update script completed", "script", script)

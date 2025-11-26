@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/shikanime-studio/automata/internal/utils"
 )
@@ -44,7 +45,7 @@ func WithPreRelease(include bool) FindLatestOption {
 }
 
 func ListVersions(chart *ChartRef) ([]string, error) {
-	repoName := "temp-" + sanitizeRepoName(chart.RepoURL)
+	repoName := fmt.Sprintf("temp-%s-%d", sanitizeRepoName(chart.RepoURL), time.Now().UnixNano())
 	add := exec.Command("helm", "repo", "add", repoName, chart.RepoURL, "--force-update")
 	add.Env = os.Environ()
 	if out, err := add.CombinedOutput(); err != nil {
@@ -116,7 +117,8 @@ func FindLatestVersion(chart *ChartRef, opts ...FindLatestOption) (string, error
 		return "", err
 	}
 
-	best := ""
+	bestRaw := ""
+	bestSem := ""
 	for _, v := range vers {
 		var sem string
 		sem, err = utils.ParseSemver(v)
@@ -140,22 +142,31 @@ func FindLatestVersion(chart *ChartRef, opts ...FindLatestOption) (string, error
 		switch o.updateStrategy {
 		case utils.MinorUpdate:
 			if utils.Major(sem) == baseline {
-				best = v
+				if bestSem == "" || utils.Compare(sem, bestSem) > 0 {
+					bestSem = sem
+					bestRaw = v
+				}
 			} else {
 				slog.Debug("chart version excluded by strategy", "version", v, "sem", sem, "baseline", baseline)
 			}
 		case utils.PatchUpdate:
 			if utils.MajorMinor(sem) == baseline {
-				best = v
+				if bestSem == "" || utils.Compare(sem, bestSem) > 0 {
+					bestSem = sem
+					bestRaw = v
+				}
 			} else {
 				slog.Debug("chart version excluded by strategy", "version", v, "sem", sem, "baseline", baseline)
 			}
 		default:
-			best = v
+			if bestSem == "" || utils.Compare(sem, bestSem) > 0 {
+				bestSem = sem
+				bestRaw = v
+			}
 		}
 	}
 
-	return best, nil
+	return bestRaw, nil
 }
 
 func sanitizeRepoName(u string) string {

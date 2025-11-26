@@ -38,39 +38,30 @@
         treefmt-nix.flakeModule
       ];
       perSystem =
-        {
-          pkgs,
-          self',
-          ...
-        }:
+        { pkgs, lib, ... }:
         {
           devenv.shells.default = {
             imports = [
               devlib.devenvModules.shikanime-studio
             ];
-            cachix = {
-              enable = true;
-              push = "shikanime";
-            };
             languages.go.enable = true;
             packages = [
               pkgs.gh
               pkgs.sapling
               pkgs.sops
-              self'.packages.default
             ];
           };
 
           packages.default = pkgs.buildGoModule {
             pname = "automata";
             version = "v0.1.0";
-            src = pkgs.lib.cleanSource ./.;
+            src = lib.cleanSource ./.;
             subPackages = [ "cmd/automata" ];
             vendorHash = "sha256-C4CTWF8ESQi3PcgPN1HUfkkCPXeeOJE3zHONEYJS2hE=";
-            meta = with pkgs.lib; {
+            meta = {
               description = "Automata CLI";
               homepage = "https://github.com/shikanime-studio/automata";
-              license = licenses.asl20;
+              license = lib.licenses.asl20;
             };
           };
         };

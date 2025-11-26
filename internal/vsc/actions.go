@@ -11,6 +11,8 @@ type GitHubActionRef struct {
 	Version string
 }
 
+// String returns the canonical "owner/repo@version" form of the action
+// reference.
 func (a GitHubActionRef) String() string {
 	return fmt.Sprintf("%s/%s@%s", a.Owner, a.Repo, a.Version)
 }

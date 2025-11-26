@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -12,16 +13,22 @@ import (
 
 // ListTags fetches tags for the given image (auth keychain, fallback anonymous).
 func ListTags(imageRef *ImageRef) ([]string, error) {
+	if strings.Contains(imageRef.Name, ":") {
+		return nil, fmt.Errorf(
+			"invalid image name %q: repository must not include a tag; set tag in ImageRef.Tag",
+			imageRef.Name,
+		)
+	}
 	// Try with keychain, then fallback to anonymous; forward any provided crane options.
 	tags, err := crane.ListTags(
-		imageRef.String(),
+		imageRef.Name,
 		crane.WithAuthFromKeychain(authn.DefaultKeychain),
 	)
 	if err != nil {
 		slog.Debug(
 			"list tags with keychain failed, falling back to anonymous",
 			"image",
-			imageRef.String(),
+			imageRef.Name,
 			"err",
 			err,
 		)
@@ -30,8 +37,8 @@ func ListTags(imageRef *ImageRef) ([]string, error) {
 			crane.WithAuth(authn.Anonymous),
 		)
 		if err != nil {
-			slog.Error("list tags failed", "image", imageRef.String(), "err", err)
-			return nil, err
+			slog.Error("list tags failed", "image", imageRef.Name, "err", err)
+			return nil, fmt.Errorf("list tags for %s (anonymous): %w", imageRef.Name, err)
 		}
 	}
 	return tags, nil
@@ -46,6 +53,14 @@ type findLatestOptions struct {
 	updateStrategy    utils.StrategyType
 	transformRegex    *regexp.Regexp
 	includePreRelease bool
+}
+
+func makeFindLatestOptions(opts ...FindLatestOption) *findLatestOptions {
+	o := &findLatestOptions{updateStrategy: utils.FullUpdate}
+	for _, opt := range opts {
+		opt(o)
+	}
+	return o
 }
 
 // WithExclude sets the exclusion list for tags. Any tag present in the map
@@ -82,28 +97,19 @@ func WithPreRelease(include bool) FindLatestOption {
 
 // FindLatestTag returns the latest tag for the given image based on the provided options.
 func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error) {
-	o := &findLatestOptions{updateStrategy: utils.FullUpdate}
-	for _, opt := range opts {
-		opt(o)
-	}
-
-	// Baseline from the current action version
-	baselineSem, err := utils.ParseSemver(imageRef.Tag)
-	if err != nil {
-		return "", fmt.Errorf("invalid baseline %q: %w", imageRef.Tag, err)
-	}
+	o := makeFindLatestOptions(opts...)
 
 	// Determine baseline according to update strategy
 	var baseline string
 	switch o.updateStrategy {
 	case utils.FullUpdate:
-		baseline = baselineSem
+		baseline = imageRef.Tag
 	case utils.MinorUpdate:
-		baseline = utils.Major(baselineSem)
+		baseline = utils.Major(imageRef.Tag)
 	case utils.PatchUpdate:
-		baseline = utils.MajorMinor(baselineSem)
+		baseline = utils.MajorMinor(imageRef.Tag)
 	default:
-		baseline = baselineSem
+		baseline = imageRef.Tag
 	}
 
 	tags, err := ListTags(imageRef)
@@ -116,15 +122,18 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 		// Skip any non-valid semver
 		var sem string
 		if o.transformRegex != nil {
+			slog.Debug("attempt semver transform", "tag", t, "regex", o.transformRegex.String())
 			sem, err = utils.ParseSemverWithRegex(o.transformRegex, t)
 			if err != nil {
-				slog.Debug("non-semver tag ignored", "tag", t, "err", err)
-				continue
-			}
-		} else {
-			sem, err = utils.ParseSemver(t)
-			if err != nil {
-				slog.Debug("non-semver tag ignored", "tag", t, "err", err)
+				slog.Debug(
+					"non-semver tag ignored",
+					"tag",
+					t,
+					"regex",
+					o.transformRegex.String(),
+					"err",
+					err,
+				)
 				continue
 			}
 		}
@@ -132,7 +141,7 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 		// Prerelease tags are skipped if not explicitly included
 		if !o.includePreRelease {
 			if utils.PreRelease(sem) != "" {
-				slog.Debug("prerelease tag ignored", "tag", t, "sem", sem)
+				slog.Debug("prerelease tag ignored by pre-release filter", "tag", t, "sem", sem)
 				continue
 			}
 		}
@@ -143,10 +152,7 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 			continue
 		}
 
-		// Apply update strategy filtering when baseline is set via WithCurrentVersion
-		if utils.Compare(sem, baseline) <= 0 {
-			continue
-		}
+		// Consider tags greater or more recent than baseline
 		switch o.updateStrategy {
 		case utils.MinorUpdate:
 			if utils.Major(sem) == baseline {
