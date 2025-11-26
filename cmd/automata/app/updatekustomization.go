@@ -10,7 +10,7 @@ import (
 	"github.com/shikanime-studio/automata/internal/container"
 	"github.com/shikanime-studio/automata/internal/utils"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
+	errgrp "golang.org/x/sync/errgroup"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
@@ -20,22 +20,27 @@ import (
 // the images annotation configuration and chosen registry strategy.
 func NewUpdateKustomizationCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "kustomization [DIR]",
+		Use:   "kustomization [DIR...]",
 		Short: "Update kustomize image tags",
-		Args:  cobra.MaximumNArgs(1),
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			root := "."
-			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-				root = args[0]
+			var g errgrp.Group
+			for _, a := range args {
+				r := strings.TrimSpace(a)
+				if r == "" {
+					continue
+				}
+				rr := r
+				g.Go(func() error { return runUpdateKustomization(rr) })
 			}
-			return runUpdateKustomization(root)
+			return g.Wait()
 		},
 	}
 }
 
 // runUpdateKustomization executes the kustomization update across the directory tree.
 func runUpdateKustomization(root string) error {
-	var g errgroup.Group
+	var g errgrp.Group
 	if err := utils.WalkDirWithGitignore(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
