@@ -12,12 +12,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// UpdateFlakeCmd runs `nix flake update` for directories containing flake.nix.
+// NewUpdateFlakeCmd runs `nix flake update` for directories containing flake.nix.
 func NewUpdateFlakeCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "flake [DIR]",
 		Short: "Run nix flake update where flake.nix exists",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
 			root := "."
 			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
 				root = args[0]

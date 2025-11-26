@@ -52,9 +52,9 @@ func ParseSemverWithRegex(re *regexp.Regexp, v string) (string, error) {
 
 	raw := getSubexpValue(re, m, "version")
 	if raw == "" {
-		return parseSemverWithRegex(re, m), nil
+		raw = parseSemverWithRegex(re, m)
 	}
-	return raw, nil
+	return Semver(raw)
 }
 
 func getSubexpValue(re *regexp.Regexp, m []string, name string) string {

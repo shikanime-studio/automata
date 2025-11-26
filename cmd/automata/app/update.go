@@ -1,3 +1,4 @@
+// Package app provides Cobra commands for automating update operations.
 package app
 
 import (
@@ -17,6 +18,7 @@ func NewUpdateCmd(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update [DIR]",
 		Short: "Update resources",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !all {
 				return cmd.Help()
@@ -32,6 +34,9 @@ func NewUpdateCmd(cfg *config.Config) *cobra.Command {
 			})
 			g.Go(func() error {
 				return runUpdateSops(root)
+			})
+			g.Go(func() error {
+				return runUpdateK0sctl(root)
 			})
 			g.Go(func() error {
 				options := []vsc.GitHubClientOption{}
@@ -50,6 +55,7 @@ func NewUpdateCmd(cfg *config.Config) *cobra.Command {
 	cmd.AddCommand(NewUpdateKustomizationCmd())
 	cmd.AddCommand(NewUpdateSopsCmd())
 	cmd.AddCommand(NewUpdateGitHubWorkflowCmd(cfg))
+	cmd.AddCommand(NewUpdateK0sctlCmd())
 	cmd.AddCommand(NewUpdateScriptCmd())
 	cmd.AddCommand(NewUpdateFlakeCmd())
 	return cmd

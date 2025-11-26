@@ -1,3 +1,4 @@
+// Package config manages application configuration and logging options.
 package config
 
 import (
@@ -6,35 +7,32 @@ import (
 	"github.com/spf13/viper"
 )
 
-type Config struct {
-	v *viper.Viper
-}
+// Config wraps application configuration and environment bindings.
+type Config struct{ v *viper.Viper }
 
-// New constructs a Config, initializing defaults, binding environment variables,
-// and loading optional configuration files.
-func New() *Config {
+// New constructs a new Config with defaults and environment bindings.
+func New() (*Config, error) {
 	v := viper.New()
+	v.AutomaticEnv()
+
 	v.SetDefault("log_level", "info")
 	v.SetDefault("log_format", "text")
 	v.SetDefault("log_source", false)
-	return &Config{v: v}
-}
 
-func (c *Config) Bind() error {
-	if err := c.v.BindEnv("log_level", "LOG_LEVEL"); err != nil {
-		return err
+	if err := v.BindEnv("log_level", "LOG_LEVEL"); err != nil {
+		return nil, err
 	}
-	if err := c.v.BindEnv("log_format", "LOG_FORMAT"); err != nil {
-		return err
+	if err := v.BindEnv("log_format", "LOG_FORMAT"); err != nil {
+		return nil, err
 	}
-	if err := c.v.BindEnv("log_source", "LOG_SOURCE"); err != nil {
-		return err
+	if err := v.BindEnv("log_source", "LOG_SOURCE"); err != nil {
+		return nil, err
 	}
-	if err := c.v.BindEnv("github_token", "GITHUB_TOKEN"); err != nil {
-		return err
+	if err := v.BindEnv("github_token", "GITHUB_TOKEN"); err != nil {
+		return nil, err
 	}
-	c.v.AutomaticEnv()
-	return nil
+
+	return &Config{v: v}, nil
 }
 
 // LogLevel returns the configured slog level, defaulting to info when unset or

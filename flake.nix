@@ -45,11 +45,8 @@
               devlib.devenvModules.shikanime-studio
             ];
             languages.go.enable = true;
-            packages = [
-              pkgs.gh
-              pkgs.sapling
-              pkgs.sops
-            ];
+
+            sops.enable = true;
           };
 
           packages.default = pkgs.buildGoModule {

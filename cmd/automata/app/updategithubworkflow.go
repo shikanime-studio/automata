@@ -23,6 +23,7 @@ func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
 	return &cobra.Command{
 		Use:   "githubworkflow [DIR]",
 		Short: "Update GitHub Actions in workflows to latest major versions",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root := "."
 			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {

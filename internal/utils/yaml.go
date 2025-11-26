@@ -10,27 +10,15 @@ import (
 )
 
 const (
-	// ImagesAnnotation is the kustomize annotation key that stores image
-	// configuration in JSON, used to control tag selection and update strategy.
-	ImagesAnnotation = "automata.shikanime.studio/images"
-
-	// KubernetesNameLabel is the recommended Kubernetes label key for the app
-	// name, applied to kustomization labels pairs.
-	KubernetesNameLabel = "app.kubernetes.io/name"
-
-	// KubernetesVersionLabel is the recommended Kubernetes label key for the app
-	// version, applied to kustomization labels pairs.
+	ImagesAnnotation       = "automata.shikanime.studio/images"
+	KubernetesNameLabel    = "app.kubernetes.io/name"
 	KubernetesVersionLabel = "app.kubernetes.io/version"
 )
 
-// GetImagesAnnotation returns a kyaml filter that retrieves the images
-// configuration annotation (ImagesAnnotation) from a kustomization.
 func GetImagesAnnotation() yaml.Filter {
 	return yaml.GetAnnotation(ImagesAnnotation)
 }
 
-// ImagesEntrySetter sets fields on an existing images[] item matched by name.
-// Creates the images sequence if missing; skips if the item doesn't exist.
 type ImagesEntrySetter struct {
 	Name    string `yaml:"name,omitempty"`
 	NewName string `yaml:"newName,omitempty"`
@@ -68,16 +56,10 @@ func (s ImagesEntrySetter) Filter(rn *yaml.RNode) (*yaml.RNode, error) {
 	return rn, nil
 }
 
-// SetImage returns an ImagesEntrySetter that sets the name/newName/newTag fields
-// on a matching item in the images[] section of a kustomization.
-// SetImage returns a setter to update name/newName/newTag in images[].
 func SetImage(name, newName, newTag string) ImagesEntrySetter {
 	return ImagesEntrySetter{Name: name, NewName: newName, NewTag: newTag}
 }
 
-// RecommandedLabelsSetter updates the labels[].pairs[labelKey] in kustomization.yaml.
-// It updates the first labels entry's pairs map. If labels or pairs do not
-// exist, it skips.
 type RecommandedLabelsSetter struct {
 	Name    string `yaml:"name,omitempty"`
 	Version string `yaml:"version,omitempty"`
@@ -107,24 +89,18 @@ func (s RecommandedLabelsSetter) Filter(rn *yaml.RNode) (*yaml.RNode, error) {
 	return rn, nil
 }
 
-// SetRecommandedLabels returns a setter to update recommended name/version labels.
 func SetRecommandedLabels(name, version string) RecommandedLabelsSetter {
 	return RecommandedLabelsSetter{Name: name, Version: version}
 }
 
-// StrategyType controls how new tags are chosen relative to a baseline.
 type StrategyType int
 
 const (
-	// FullUpdate: any greater version.
 	FullUpdate StrategyType = iota
-	// MinorUpdate: same major.
 	MinorUpdate
-	// PatchUpdate: same major.minor.
 	PatchUpdate
 )
 
-// ImagesConfig configures image tag selection and update strategy.
 type ImagesConfig struct {
 	Name         string
 	TagRegex     *regexp.Regexp
@@ -132,7 +108,6 @@ type ImagesConfig struct {
 	StrategyType StrategyType
 }
 
-// UnmarshalJSON parses ImagesConfig from annotation JSON.
 func (c *ImagesConfig) UnmarshalJSON(data []byte) error {
 	var raw struct {
 		Name         string   `json:"name"`
@@ -166,7 +141,6 @@ func (c *ImagesConfig) UnmarshalJSON(data []byte) error {
 		c.ExcludeTags = nil
 	}
 
-	// Parse update strategy
 	if raw.StrategyType != "" {
 		switch strings.ToLower(raw.StrategyType) {
 		case "FullUpdate":
@@ -186,7 +160,6 @@ func (c *ImagesConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// GetImagesConfig extracts image configs from an annotation node.
 func GetImagesConfig(node *yaml.RNode) ([]ImagesConfig, error) {
 	if yaml.IsMissingOrNull(node) {
 		return nil, nil
@@ -198,7 +171,6 @@ func GetImagesConfig(node *yaml.RNode) ([]ImagesConfig, error) {
 	return imageConfigs, nil
 }
 
-// CreateImageConfigsByName maps image name to its configuration.
 func CreateImageConfigsByName(imageConfigs []ImagesConfig) map[string]ImagesConfig {
 	cfgByName := make(map[string]ImagesConfig, len(imageConfigs))
 	for _, c := range imageConfigs {

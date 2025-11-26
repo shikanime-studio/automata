@@ -14,9 +14,9 @@ import (
 // init configures the global logger using values from the application
 // configuration.
 func init() {
-	cfg := config.New()
-	if err := cfg.Bind(); err != nil {
-		slog.Error("failed to bind config", "err", err)
+	cfg, err := config.New()
+	if err != nil {
+		slog.Error("failed to initialize config", "err", err)
 		os.Exit(1)
 	}
 	opts := &slog.HandlerOptions{Level: cfg.LogLevel(), AddSource: cfg.LogSource()}
@@ -35,9 +35,9 @@ func main() {
 		Use:   "automata",
 		Short: "Automata CLI",
 	}
-	cfg := config.New()
-	if err := cfg.Bind(); err != nil {
-		slog.Error("failed to bind config", "err", err)
+	cfg, err := config.New()
+	if err != nil {
+		slog.Error("failed to initialize config", "err", err)
 		os.Exit(1)
 	}
 	rootCmd.AddCommand(app.NewUpdateCmd(cfg))

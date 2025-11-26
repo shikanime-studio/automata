@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/registry"
+	"github.com/shikanime-studio/automata/internal/container"
 	"github.com/shikanime-studio/automata/internal/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -15,14 +15,15 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-// UpdateKustomizationCmd updates kustomize image tags across a directory tree.
+// NewUpdateKustomizationCmd updates kustomize image tags across a directory tree.
 // It scans for kustomization.yaml files and updates image tags based on
 // the images annotation configuration and chosen registry strategy.
 func NewUpdateKustomizationCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "kustomization [DIR]",
 		Short: "Update kustomize image tags",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
 			root := "."
 			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
 				root = args[0]
@@ -128,21 +129,21 @@ func createUpdateImagesFilter() kio.Filter {
 					return nil, fmt.Errorf("get newName for %s: %w", name, err)
 				}
 
-				options := []registry.FindLatestOption{}
+				options := []container.FindLatestOption{}
 
 				if cfg.StrategyType != utils.FullUpdate {
-					options = append(options, registry.WithStrategyType(cfg.StrategyType))
+					options = append(options, container.WithStrategyType(cfg.StrategyType))
 				}
 
 				if len(cfg.ExcludeTags) > 0 {
-					options = append(options, registry.WithExclude(cfg.ExcludeTags))
+					options = append(options, container.WithExclude(cfg.ExcludeTags))
 				}
 
 				if cfg.TagRegex != nil {
-					options = append(options, registry.WithTransform(cfg.TagRegex))
+					options = append(options, container.WithTransform(cfg.TagRegex))
 				}
 
-				imageRef := registry.ImageRef{
+				imageRef := container.ImageRef{
 					Name: yaml.GetValue(newNameNode),
 				}
 
@@ -160,7 +161,7 @@ func createUpdateImagesFilter() kio.Filter {
 					imageRef.Tag = version
 				}
 
-				latest, err := registry.FindLatestTag(&imageRef, options...)
+				latest, err := container.FindLatestTag(&imageRef, options...)
 				if err != nil {
 					latest = currentTag
 				}
