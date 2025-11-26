@@ -44,15 +44,6 @@
             imports = [
               devlib.devenvModules.shikanime-studio
             ];
-
-            git-hooks = {
-              hooks = {
-                govet.enable = true;
-                revive.enable = false;
-                staticcheck.enable = false;
-              };
-            };
-
             languages.go.enable = true;
 
             sops.enable = true;

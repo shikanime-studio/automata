@@ -15,8 +15,10 @@ import (
 // NewUpdateFlakeCmd runs `nix flake update` for directories containing flake.nix.
 func NewUpdateFlakeCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "flake [DIR]",
-		Short: "Run nix flake update where flake.nix exists",
+		Use:               "flake [DIR]",
+		Short:             "Run nix flake update where flake.nix exists",
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: dirValidArgsFunc,
 		RunE: func(_ *cobra.Command, args []string) error {
 			root := "."
 			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {

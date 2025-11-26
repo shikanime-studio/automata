@@ -18,14 +18,16 @@ import (
 
 // NewUpdateK0sctlCmd updates k0sctl clusters with the latest chart versions.
 func NewUpdateK0sctlCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "k0sctl [DIR]",
-		Short: "Update k0sctl with latest chart versions",
-		RunE: func(_ *cobra.Command, args []string) error {
-			root := "."
-			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-				root = args[0]
-			}
+    return &cobra.Command{
+        Use:   "k0sctl [DIR]",
+        Short: "Update k0sctl with latest chart versions",
+        Args:  cobra.MaximumNArgs(1),
+        ValidArgsFunction: dirValidArgsFunc,
+        RunE: func(_ *cobra.Command, args []string) error {
+            root := "."
+            if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+                root = args[0]
+            }
 			return runUpdateK0sctl(root)
 		},
 	}
