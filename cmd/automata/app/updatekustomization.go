@@ -20,13 +20,18 @@ import (
 // the images annotation configuration and chosen registry strategy.
 func NewUpdateKustomizationCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "kustomization [DIR]",
+		Use:   "kustomization DIR...",
 		Short: "Update kustomize image tags",
-		Args:  cobra.MaximumNArgs(1),
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			root := "."
-			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-				root = args[0]
+			for _, a := range args {
+				root := strings.TrimSpace(a)
+				if root == "" {
+					continue
+				}
+				if err := automatakio.UpdateKustomization(root).Execute(); err != nil {
+					return err
+				}
 			}
 			return runUpdateKustomization(root)
 		},

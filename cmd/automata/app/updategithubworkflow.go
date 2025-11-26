@@ -21,14 +21,10 @@ import (
 // GitHub Actions versions in workflow files.
 func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
 	return &cobra.Command{
-		Use:   "githubworkflow [DIR]",
+		Use:   "githubworkflow DIR...",
 		Short: "Update GitHub Actions in workflows to latest major versions",
-		Args:  cobra.MaximumNArgs(1),
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root := "."
-			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-				root = args[0]
-			}
 			options := []vsc.GitHubClientOption{}
 			if tok := cfg.GitHubToken(); tok != "" {
 				options = append(options, vsc.WithAuthToken(tok))

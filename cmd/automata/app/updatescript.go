@@ -14,18 +14,23 @@ import (
 
 // NewUpdateScriptCmd runs all update.sh scripts found under the provided directory.
 func NewUpdateScriptCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "updatescript [DIR]",
-		Short: "Run all update.sh scripts",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			root := "."
-			if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-				root = args[0]
-			}
-			return runUpdateScript(root)
-		},
-	}
+    return &cobra.Command{
+        Use:   "updatescript DIR...",
+        Short: "Run all update.sh scripts",
+        Args:  cobra.MinimumNArgs(1),
+        RunE: func(_ *cobra.Command, args []string) error {
+            for _, a := range args {
+                root := strings.TrimSpace(a)
+                if root == "" {
+                    continue
+                }
+                if err := runUpdateScript(root); err != nil {
+                    return err
+                }
+            }
+            return nil
+        },
+    }
 }
 
 // runUpdateScript walks the directory tree starting at root and executes every update.sh found.
