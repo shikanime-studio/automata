@@ -156,7 +156,16 @@ func UpdateK0sctlConfigchart(
 		if err := node.PipeE(yaml.SetField("version", yaml.NewStringRNode(ver))); err != nil {
 			return nil, fmt.Errorf("set version failed: %w", err)
 		}
-		slog.Info("updated chart version", "chart", chartName, "version", ver, "repo", repoURL)
+		slog.InfoContext(
+			ctx,
+			"updated chart version",
+			"chart",
+			chartName,
+			"version",
+			ver,
+			"repo",
+			repoURL,
+		)
 		return node, nil
 	})
 }

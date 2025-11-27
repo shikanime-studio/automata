@@ -15,16 +15,16 @@ func RunCheck(ctx context.Context, root string) error {
 		return ctx.Err()
 	default:
 	}
-	slog.Info("running nix flake check", "dir", root)
+	slog.InfoContext(ctx, "running nix flake check", "dir", root)
 	out, runErr := runNixFlakeCheck(ctx, root)
 	if len(out) > 0 {
-		slog.Info("nix flake check output", "dir", root, "output", string(out))
+		slog.InfoContext(ctx, "nix flake check output", "dir", root, "output", string(out))
 	}
 	if runErr == nil {
-		slog.Info("nix flake check succeeded", "dir", root)
+		slog.InfoContext(ctx, "nix flake check succeeded", "dir", root)
 		return nil
 	}
-	slog.Warn("nix flake check failed", "dir", root, "err", runErr)
+	slog.WarnContext(ctx, "nix flake check failed", "dir", root, "err", runErr)
 	return runErr
 }
 

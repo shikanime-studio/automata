@@ -35,11 +35,11 @@ func runCheckLifecycle(ctx context.Context, root string) error {
 	var lastErr error
 	for i := 1; i <= maxIterations; i++ {
 		if err := agent.RunCheck(ctx, root); err == nil {
-			slog.Info("check succeeded", "dir", root, "iteration", i)
+			slog.InfoContext(ctx, "check succeeded", "dir", root, "iteration", i)
 			return nil
 		} else {
 			lastErr = err
-			slog.Warn("check failed; attempting fixes", "dir", root, "iteration", i, "err", err)
+			slog.WarnContext(ctx, "check failed; attempting fixes", "dir", root, "iteration", i, "err", err)
 		}
 		if err := runUpdateFlake(ctx, root); err != nil {
 			slog.WarnContext(ctx, "update flake failed", "dir", root, "err", err)

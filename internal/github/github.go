@@ -20,35 +20,35 @@ type Client struct {
 // NewLimiter creates a new rate limiter for GitHub API calls.
 // Authenticated: ~1.39 requests/second (5000/hour) with burst 10.
 // Unauthenticated: 1 request/minute (60/hour) with burst 1.
-func NewLimiter(authenticated bool) *rate.Limiter {
+func NewLimiter(ctx context.Context, authenticated bool) *rate.Limiter {
 	if authenticated {
 		limiter := rate.NewLimiter(rate.Limit(5000.0/3600.0), 10)
-		slog.Info("Created authenticated GitHub rate limiter",
+		slog.InfoContext(ctx, "Created authenticated GitHub rate limiter",
 			"rate", "≈1.39 requests/second",
 			"burst", 10)
 		return limiter
 	}
 	limiter := rate.NewLimiter(rate.Limit(60.0/3600.0), 1)
-	slog.Info("Created unauthenticated GitHub rate limiter",
+	slog.InfoContext(ctx, "Created unauthenticated GitHub rate limiter",
 		"rate", "1 request/minute",
 		"burst", 1)
 	return limiter
 }
 
 // NewClient creates a new GitHub client using configuration.
-func NewClient(cfg *config.Config) *Client {
+func NewClient(ctx context.Context, cfg *config.Config) *Client {
 	tok := cfg.GitHubToken()
 	if tok != "" {
-		slog.Info("Using authenticated GitHub client")
+		slog.InfoContext(ctx, "Using authenticated GitHub client")
 		return &Client{
 			c: github.NewClient(nil).WithAuthToken(tok),
-			l: NewLimiter(true),
+			l: NewLimiter(ctx, true),
 		}
 	}
-	slog.Warn("Using unauthenticated GitHub client (rate limited)")
+	slog.WarnContext(ctx, "Using unauthenticated GitHub client (rate limited)")
 	return &Client{
 		c: github.NewClient(nil),
-		l: NewLimiter(false),
+		l: NewLimiter(ctx, false),
 	}
 }
 
