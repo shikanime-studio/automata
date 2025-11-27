@@ -42,7 +42,6 @@
           self',
           pkgs,
           lib,
-          system,
           ...
         }:
         {
