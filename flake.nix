@@ -51,11 +51,26 @@
             ];
 
             git-hooks.hooks = {
-              govet.enable = true;
-              revive.enable = true;
+              govet = {
+                enable = true;
+                excludes = [
+                  "^vendor/"
+                  "^\.devenv/"
+                ];
+              };
+              revive = {
+                enable = true;
+                excludes = [
+                  "^vendor/"
+                  "^\.devenv/"
+                ];
+              };
               staticcheck = {
                 enable = true;
-                excludes = [ "vendor/*" ];
+                excludes = [
+                  "^vendor/"
+                  "^\.devenv/"
+                ];
               };
             };
 

@@ -84,10 +84,12 @@ func (c *Config) GitHubToken() string {
 	return c.v.GetString("github_token")
 }
 
+// GoogleAPIKey returns the Google API key used for LLM access.
 func (c *Config) GoogleAPIKey() string {
 	return c.v.GetString("google_api_key")
 }
 
+// ModelName returns the preferred LLM model name.
 func (c *Config) ModelName() string {
 	s := strings.TrimSpace(c.v.GetString("llm_model_name"))
 	if s == "" {
