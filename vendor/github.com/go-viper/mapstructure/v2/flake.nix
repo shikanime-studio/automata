@@ -5,8 +5,9 @@
     devenv.url = "github:cachix/devenv";
   };
 
-  outputs = inputs @ {flake-parts, ...}:
-    flake-parts.lib.mkFlake {inherit inputs;} {
+  outputs =
+    inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.devenv.flakeModule
       ];
@@ -17,27 +18,29 @@
         "aarch64-darwin"
       ];
 
-      perSystem = {pkgs, ...}: rec {
-        devenv.shells = {
-          default = {
-            languages = {
-              go.enable = true;
+      perSystem =
+        { pkgs, ... }:
+        rec {
+          devenv.shells = {
+            default = {
+              languages = {
+                go.enable = true;
+              };
+
+              pre-commit.hooks = {
+                nixpkgs-fmt.enable = true;
+              };
+
+              packages = with pkgs; [
+                golangci-lint
+              ];
+
+              # https://github.com/cachix/devenv/issues/528#issuecomment-1556108767
+              containers = pkgs.lib.mkForce { };
             };
 
-            pre-commit.hooks = {
-              nixpkgs-fmt.enable = true;
-            };
-
-            packages = with pkgs; [
-              golangci-lint
-            ];
-
-            # https://github.com/cachix/devenv/issues/528#issuecomment-1556108767
-            containers = pkgs.lib.mkForce {};
+            ci = devenv.shells.default;
           };
-
-          ci = devenv.shells.default;
         };
-      };
     };
 }
