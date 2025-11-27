@@ -38,12 +38,26 @@
         treefmt-nix.flakeModule
       ];
       perSystem =
-        { pkgs, lib, ... }:
+        {
+          self',
+          pkgs,
+          lib,
+          system,
+          ...
+        }:
         {
           devenv.shells.default = {
             imports = [
               devlib.devenvModules.shikanime-studio
             ];
+
+            automata.package = self'.packages.default;
+
+            git-hooks.hooks = {
+              govet.enable = true;
+              revive.enable = true;
+              staticcheck.enable = true;
+            };
 
             languages.go.enable = true;
           };
@@ -53,7 +67,7 @@
             version = "v0.1.0";
             src = lib.cleanSource ./.;
             subPackages = [ "cmd/automata" ];
-            vendorHash = "sha256-OQfWosVIElYcuKTP4YYsHOvfz94JamRkcFzqj49fSgA=";
+            vendorHash = null;
             meta = {
               description = "Automata CLI";
               homepage = "https://github.com/shikanime-studio/automata";
