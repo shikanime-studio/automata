@@ -10,27 +10,28 @@ import (
 
 	"github.com/shikanime-studio/automata/internal/utils"
 	"github.com/spf13/cobra"
+	errgrp "golang.org/x/sync/errgroup"
 )
 
 // NewUpdateScriptCmd runs all update.sh scripts found under the provided directory.
 func NewUpdateScriptCmd() *cobra.Command {
-    return &cobra.Command{
-        Use:   "updatescript DIR...",
-        Short: "Run all update.sh scripts",
-        Args:  cobra.MinimumNArgs(1),
-        RunE: func(_ *cobra.Command, args []string) error {
-            for _, a := range args {
-                root := strings.TrimSpace(a)
-                if root == "" {
-                    continue
-                }
-                if err := runUpdateScript(root); err != nil {
-                    return err
-                }
-            }
-            return nil
-        },
-    }
+	return &cobra.Command{
+		Use:   "updatescript [DIR...]",
+		Short: "Run all update.sh scripts",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			var g errgrp.Group
+			for _, a := range args {
+				r := strings.TrimSpace(a)
+				if r == "" {
+					continue
+				}
+				rr := r
+				g.Go(func() error { return runUpdateScript(rr) })
+			}
+			return g.Wait()
+		},
+	}
 }
 
 // runUpdateScript walks the directory tree starting at root and executes every update.sh found.
@@ -56,24 +57,27 @@ func runUpdateScript(root string) error {
 		slog.Info("no update.sh scripts found", "root", root)
 		return nil
 	}
-
+	var g errgrp.Group
 	for _, script := range scripts {
-		dir := filepath.Dir(script)
-		slog.Info("running update script", "script", script)
-		cmd := exec.Command("bash", "update.sh")
-		cmd.Dir = dir
-		cmd.Env = os.Environ()
+		s := script
+		g.Go(func() error {
+			dir := filepath.Dir(s)
+			slog.Info("running update script", "script", s)
+			cmd := exec.Command("bash", "update.sh")
+			cmd.Dir = dir
+			cmd.Env = os.Environ()
 
-		out, runErr := cmd.CombinedOutput()
-		if len(out) > 0 {
-			slog.Info("update.sh output", "script", script, "output", string(out))
-		}
-		if runErr != nil {
-			slog.Warn("update.sh failed", "script", script, "err", runErr)
-			return fmt.Errorf("run %s: %w", script, runErr)
-		}
-		slog.Info("update script completed", "script", script)
+			out, runErr := cmd.CombinedOutput()
+			if len(out) > 0 {
+				slog.Info("update.sh output", "script", s, "output", string(out))
+			}
+			if runErr != nil {
+				slog.Warn("update.sh failed", "script", s, "err", runErr)
+				return fmt.Errorf("run %s: %w", s, runErr)
+			}
+			slog.Info("update script completed", "script", s)
+			return nil
+		})
 	}
-
-	return nil
+	return g.Wait()
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/shikanime-studio/automata/internal/utils"
 	"github.com/shikanime-studio/automata/internal/vsc"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
+	errgrp "golang.org/x/sync/errgroup"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
@@ -21,7 +21,7 @@ import (
 // GitHub Actions versions in workflow files.
 func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
 	return &cobra.Command{
-		Use:   "githubworkflow DIR...",
+		Use:   "githubworkflow [DIR...]",
 		Short: "Update GitHub Actions in workflows to latest major versions",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -29,7 +29,17 @@ func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
 			if tok := cfg.GitHubToken(); tok != "" {
 				options = append(options, vsc.WithAuthToken(tok))
 			}
-			return runGitHubUpdateWorkflow(cmd.Context(), vsc.NewGitHubClient(options...), root)
+			client := vsc.NewGitHubClient(options...)
+			var g errgrp.Group
+			for _, a := range args {
+				r := strings.TrimSpace(a)
+				if r == "" {
+					continue
+				}
+				rr := r
+				g.Go(func() error { return runGitHubUpdateWorkflow(cmd.Context(), client, rr) })
+			}
+			return g.Wait()
 		},
 	}
 }
@@ -47,7 +57,7 @@ func runGitHubUpdateWorkflow(ctx context.Context, client *vsc.GitHubClient, root
 		return fmt.Errorf("read workflows dir: %w", err)
 	}
 
-	var g errgroup.Group
+	var g errgrp.Group
 	for _, e := range entries {
 		if e.IsDir() {
 			continue
@@ -159,7 +169,7 @@ func processJob(
 		slog.Warn("failed to get steps", "job", jobName, "err", err)
 		return fmt.Errorf("get steps: %w", err)
 	}
-	var wg errgroup.Group
+	var wg errgrp.Group
 	for idx, step := range stepElems {
 		wg.Go(func() error {
 			return processStep(ctx, client, step, jobName, idx)

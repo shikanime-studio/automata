@@ -11,7 +11,7 @@ import (
 	"github.com/shikanime-studio/automata/internal/helm"
 	"github.com/shikanime-studio/automata/internal/utils"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
+	errgrp "golang.org/x/sync/errgroup"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
@@ -19,27 +19,27 @@ import (
 // NewUpdateK0sctlCmd updates k0sctl clusters with the latest chart versions.
 func NewUpdateK0sctlCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "k0sctl DIR...",
+		Use:   "k0sctl [DIR...]",
 		Short: "Update k0sctl with latest chart versions",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
+			var g errgrp.Group
 			for _, a := range args {
-				root := strings.TrimSpace(a)
-				if root == "" {
+				r := strings.TrimSpace(a)
+				if r == "" {
 					continue
 				}
-				if err := automatakio.UpdateK0sctl(root).Execute(); err != nil {
-					return err
-				}
+				rr := r
+				g.Go(func() error { return runUpdateK0sctl(rr) })
 			}
-			return runUpdateK0sctl(root)
+			return g.Wait()
 		},
 	}
 }
 
 func runUpdateK0sctl(root string) error {
 	slog.Debug("start k0sctl update scan", "root", root)
-	g := new(errgroup.Group)
+	var g errgrp.Group
 	if err := utils.WalkDirWithGitignore(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
