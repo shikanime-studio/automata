@@ -15,6 +15,7 @@ import (
 	"google.golang.org/genai"
 )
 
+// MigratorConfig controls the migrator agent setup.
 type MigratorConfig struct {
 	Name        string
 	Description string
@@ -22,6 +23,7 @@ type MigratorConfig struct {
 	ModelName   string
 }
 
+// NewMigratorAgent constructs a migrator agent with tools to update workflows.
 func NewMigratorAgent(
 	ctx context.Context,
 	appcfg *config.Config,

@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// NewUpdateAllCmd returns a command that runs all update operations over directories.
 func NewUpdateAllCmd(cfg *config.Config) *cobra.Command {
 	return &cobra.Command{
 		Use:   "all [DIR...]",

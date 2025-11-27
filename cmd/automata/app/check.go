@@ -10,6 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// NewCheckCmd returns a command that retries `nix flake check` with fixes.
 func NewCheckCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check [DIR...]",
@@ -34,13 +35,22 @@ func runCheckLifecycle(ctx context.Context, root string) error {
 	const maxIterations = 10
 	var lastErr error
 	for i := 1; i <= maxIterations; i++ {
-		if err := agent.RunCheck(ctx, root); err == nil {
+		err := agent.RunCheck(ctx, root)
+		if err == nil {
 			slog.InfoContext(ctx, "check succeeded", "dir", root, "iteration", i)
 			return nil
-		} else {
-			lastErr = err
-			slog.WarnContext(ctx, "check failed; attempting fixes", "dir", root, "iteration", i, "err", err)
 		}
+		lastErr = err
+		slog.WarnContext(
+			ctx,
+			"check failed; attempting fixes",
+			"dir",
+			root,
+			"iteration",
+			i,
+			"err",
+			err,
+		)
 		if err := runUpdateFlake(ctx, root); err != nil {
 			slog.WarnContext(ctx, "update flake failed", "dir", root, "err", err)
 		}

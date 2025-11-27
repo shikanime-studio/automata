@@ -53,7 +53,10 @@
             git-hooks.hooks = {
               govet.enable = true;
               revive.enable = true;
-              staticcheck.enable = true;
+              staticcheck = {
+                enable = true;
+                excludes = [ "vendor/*" ];
+              };
             };
 
             automata.package = self'.packages.default;

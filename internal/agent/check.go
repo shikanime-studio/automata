@@ -1,3 +1,4 @@
+// Package agent provides automation helpers for checks and migrations.
 package agent
 
 import (
@@ -8,9 +9,12 @@ import (
 	"time"
 )
 
-var runCheckInitialBackoff = 1 * time.Second
-var runCheckMaxBackoff = 1 * time.Minute
+var (
+	runCheckInitialBackoff = 1 * time.Second
+	runCheckMaxBackoff     = 1 * time.Minute
+)
 
+// RunCheck executes `nix flake check` with exponential backoff until success or cancellation.
 func RunCheck(ctx context.Context, root string) error {
 	backoff := runCheckInitialBackoff
 	for {

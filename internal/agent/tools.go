@@ -13,14 +13,17 @@ import (
 	"google.golang.org/adk/tool/functiontool"
 )
 
-type readArgs struct{ Path string }
-type readResult struct{ Content string }
+type (
+	readArgs   struct{ Path string }
+	readResult struct{ Content string }
+)
 
+// NewReadFileTool returns a tool that reads a file and returns its content.
 func NewReadFileTool() (tool.Tool, error) {
 	return functiontool.New(functiontool.Config{
 		Name:        "read_file",
 		Description: "Read a file and return its content",
-	}, func(tc tool.Context, in readArgs) (readResult, error) {
+	}, func(_ tool.Context, in readArgs) (readResult, error) {
 		b, err := os.ReadFile(in.Path)
 		if err != nil {
 			return readResult{}, err
@@ -35,11 +38,12 @@ type writeArgs struct {
 }
 type writeResult struct{ Bytes int }
 
+// NewWriteFileTool returns a tool that writes content to a file.
 func NewWriteFileTool() (tool.Tool, error) {
 	return functiontool.New(functiontool.Config{
 		Name:        "write_file",
 		Description: "Write content to a file, creating it if needed",
-	}, func(tc tool.Context, in writeArgs) (writeResult, error) {
+	}, func(_ tool.Context, in writeArgs) (writeResult, error) {
 		if err := os.MkdirAll(filepath.Dir(in.Path), 0o755); err != nil {
 			return writeResult{}, err
 		}
@@ -57,11 +61,12 @@ type replaceArgs struct {
 }
 type replaceResult struct{ Count int }
 
+// NewReplaceTextTool returns a tool that performs regex replacements in a file.
 func NewReplaceTextTool() (tool.Tool, error) {
 	return functiontool.New[replaceArgs, replaceResult](functiontool.Config{
 		Name:        "replace_text",
 		Description: "Regex replace occurrences in a file",
-	}, func(tc tool.Context, in replaceArgs) (replaceResult, error) {
+	}, func(_ tool.Context, in replaceArgs) (replaceResult, error) {
 		re, err := regexp.Compile(in.Pattern)
 		if err != nil {
 			return replaceResult{}, err
@@ -87,11 +92,12 @@ type insertArgs struct {
 }
 type insertResult struct{ Lines int }
 
+// NewInsertTextTool returns a tool that inserts text at a given line number.
 func NewInsertTextTool() (tool.Tool, error) {
 	return functiontool.New[insertArgs, insertResult](functiontool.Config{
 		Name:        "insert_text",
 		Description: "Insert text at a 1-based line number",
-	}, func(tc tool.Context, in insertArgs) (insertResult, error) {
+	}, func(_ tool.Context, in insertArgs) (insertResult, error) {
 		f, err := os.Open(in.Path)
 		if err != nil {
 			return insertResult{}, err
@@ -128,11 +134,12 @@ type deleteArgs struct {
 }
 type deleteResult struct{ Lines int }
 
+// NewDeleteLinesTool returns a tool that deletes an inclusive line range.
 func NewDeleteLinesTool() (tool.Tool, error) {
 	return functiontool.New[deleteArgs, deleteResult](functiontool.Config{
 		Name:        "delete_lines",
 		Description: "Delete lines [start,end] inclusive (1-based)",
-	}, func(tc tool.Context, in deleteArgs) (deleteResult, error) {
+	}, func(_ tool.Context, in deleteArgs) (deleteResult, error) {
 		f, err := os.Open(in.Path)
 		if err != nil {
 			return deleteResult{}, err
@@ -181,11 +188,12 @@ type searchHit struct {
 }
 type searchResult struct{ Hits []searchHit }
 
+// NewSearchTextTool returns a tool that searches text using regex.
 func NewSearchTextTool() (tool.Tool, error) {
 	return functiontool.New[searchArgs, searchResult](functiontool.Config{
 		Name:        "search_text",
 		Description: "Search text with regex over files honoring .gitignore",
-	}, func(tc tool.Context, in searchArgs) (searchResult, error) {
+	}, func(_ tool.Context, in searchArgs) (searchResult, error) {
 		re, err := regexp.Compile(in.Pattern)
 		if err != nil {
 			return searchResult{}, err

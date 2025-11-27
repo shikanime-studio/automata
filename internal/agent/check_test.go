@@ -18,7 +18,7 @@ func TestRunCheckRetriesUntilSuccess(t *testing.T) {
 	attempts := 0
 	oldRunner := runNixFlakeCheck
 	defer func() { runNixFlakeCheck = oldRunner }()
-	runNixFlakeCheck = func(ctx context.Context, d string) (string, error) {
+	runNixFlakeCheck = func(_ context.Context, _ string) (string, error) {
 		attempts++
 		if attempts < 3 {
 			return "fail", os.ErrInvalid
@@ -57,7 +57,7 @@ func TestRunCheckCancellation(t *testing.T) {
 
 	oldRunner := runNixFlakeCheck
 	defer func() { runNixFlakeCheck = oldRunner }()
-	runNixFlakeCheck = func(ctx context.Context, d string) (string, error) {
+	runNixFlakeCheck = func(_ context.Context, _ string) (string, error) {
 		return "fail", os.ErrInvalid
 	}
 	oldInitial := runCheckInitialBackoff

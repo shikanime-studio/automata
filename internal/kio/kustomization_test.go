@@ -73,7 +73,7 @@ images:
   newName: repo/app
   newTag: release-1-2-3`
 	rn := yaml.MustParse(doc)
-	_, err := UpdateKustomizationLabelsNode().Filter(rn)
+	_, err := UpdateKustomizationLabelsNode(context.Background()).Filter(rn)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
