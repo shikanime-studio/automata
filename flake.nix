@@ -53,7 +53,7 @@
             version = "v0.1.0";
             src = lib.cleanSource ./.;
             subPackages = [ "cmd/automata" ];
-            vendorHash = "sha256-C4CTWF8ESQi3PcgPN1HUfkkCPXeeOJE3zHONEYJS2hE=";
+            vendorHash = "sha256-OQfWosVIElYcuKTP4YYsHOvfz94JamRkcFzqj49fSgA=";
             meta = {
               description = "Automata CLI";
               homepage = "https://github.com/shikanime-studio/automata";
