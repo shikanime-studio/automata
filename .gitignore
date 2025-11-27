@@ -309,5 +309,4 @@ $RECYCLE.BIN/
 ###-------------------###
 
 __debug_bin*
-vendor/
 .pre-commit-config.yaml
