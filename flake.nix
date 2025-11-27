@@ -53,10 +53,6 @@
             automata.package = self'.packages.default;
 
             languages.go.enable = true;
-            git-hooks.hooks.golangci-lint = {
-              enable = true;
-              files = "^(?!vendor/).*\\.go$";
-            };
           };
 
           packages.default = pkgs.buildGoModule {

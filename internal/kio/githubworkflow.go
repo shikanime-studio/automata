@@ -103,7 +103,6 @@ func UpdateGitHubWorkflowJob(
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
 		jobNode, err := node.Pipe(yaml.Lookup(name))
 		if err != nil {
-			slog.WarnContext(ctx, "failed to lookup job", "job", name, "err", err)
 			return nil, fmt.Errorf("lookup job %s: %w", name, err)
 		}
 		if jobNode == nil {
