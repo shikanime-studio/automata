@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"strings"
 
 	"github.com/shikanime-studio/automata/internal/config"
@@ -13,7 +14,7 @@ import (
 )
 
 // NewMigrateCmd performs migration: checks upgrades and applies corrections for new versions.
-func NewMigrateCmd(cfg *config.Config) *cobra.Command {
+func NewMigrateCmd(ctx context.Context, cfg *config.Config) *cobra.Command {
 	return &cobra.Command{
 		Use:   "migrate [DIR...]",
 		Short: "Check for upgrades and apply corrections to work with new versions",
@@ -21,7 +22,7 @@ func NewMigrateCmd(cfg *config.Config) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cu := container.NewUpdater()
 			hu := helm.NewUpdater()
-			gu := github.NewUpdater(github.NewClient(cfg))
+			gu := github.NewUpdater(github.NewClient(ctx, cfg))
 
 			var g errgroup.Group
 			for _, a := range args {

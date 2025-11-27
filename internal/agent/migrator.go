@@ -50,7 +50,7 @@ func NewMigratorAgent(
 		Name:        "update_github_workflows",
 		Description: "Update GitHub Actions versions in .github/workflows under the given path",
 	}, func(tc tool.Context, in updateArgs) (updateResult, error) {
-		u := igithub.NewUpdater(igithub.NewClient(appcfg))
+		u := igithub.NewUpdater(igithub.NewClient(ctx, appcfg))
 		if err := ikio.UpdateGitHubWorkflows(tc, u, in.Path).Execute(); err != nil {
 			return updateResult{}, err
 		}
