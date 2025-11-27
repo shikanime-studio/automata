@@ -7,7 +7,7 @@ import (
 	"github.com/shikanime-studio/automata/internal/github"
 	ikio "github.com/shikanime-studio/automata/internal/kio"
 	"github.com/spf13/cobra"
-	errgrp "golang.org/x/sync/errgroup"
+	"golang.org/x/sync/errgroup"
 )
 
 // NewUpdateGitHubWorkflowCmd creates the "githubworkflow" command that updates
@@ -23,7 +23,7 @@ func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
 				options = append(options, github.WithAuthToken(tok))
 			}
 			u := github.NewUpdater(github.NewClient(options...))
-			var g errgrp.Group
+			var g errgroup.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)
 				if r == "" {

@@ -6,7 +6,7 @@ import (
 	"github.com/shikanime-studio/automata/internal/container"
 	ikio "github.com/shikanime-studio/automata/internal/kio"
 	"github.com/spf13/cobra"
-	errgrp "golang.org/x/sync/errgroup"
+	"golang.org/x/sync/errgroup"
 )
 
 // NewUpdateKustomizationCmd updates kustomize image tags across a directory tree.
@@ -19,7 +19,7 @@ func NewUpdateKustomizationCmd() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			u := container.NewUpdater()
-			var g errgrp.Group
+			var g errgroup.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)
 				if r == "" {

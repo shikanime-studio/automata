@@ -1,4 +1,5 @@
-package utils
+// Package fsutil provides filesystem helpers integrated with gitignore behavior.
+package fsutil
 
 import (
 	"io/fs"

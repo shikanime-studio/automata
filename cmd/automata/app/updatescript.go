@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/utils"
+	"github.com/shikanime-studio/automata/internal/fsutil"
 	"github.com/spf13/cobra"
-	errgrp "golang.org/x/sync/errgroup"
+	"golang.org/x/sync/errgroup"
 )
 
 // NewUpdateScriptCmd runs all update.sh scripts found under the provided directory.
@@ -20,7 +20,7 @@ func NewUpdateScriptCmd() *cobra.Command {
 		Short: "Run all update.sh scripts",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			var g errgrp.Group
+			var g errgroup.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)
 				if r == "" {
@@ -37,7 +37,7 @@ func NewUpdateScriptCmd() *cobra.Command {
 // runUpdateScript walks the directory tree starting at root and executes every update.sh found.
 func runUpdateScript(root string) error {
 	var scripts []string
-	err := utils.WalkDirWithGitignore(root, func(path string, d os.DirEntry, err error) error {
+	err := fsutil.WalkDirWithGitignore(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func runUpdateScript(root string) error {
 		slog.Info("no update.sh scripts found", "root", root)
 		return nil
 	}
-	var g errgrp.Group
+	var g errgroup.Group
 	for _, script := range scripts {
 		s := script
 		g.Go(func() error {

@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/utils"
+	"github.com/shikanime-studio/automata/internal/fsutil"
 	"github.com/spf13/cobra"
-	errgrp "golang.org/x/sync/errgroup"
+	"golang.org/x/sync/errgroup"
 )
 
 // NewUpdateFlakeCmd runs `nix flake update` for directories containing flake.nix.
@@ -20,7 +20,7 @@ func NewUpdateFlakeCmd() *cobra.Command {
 		Short: "Run nix flake update where flake.nix exists",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			var g errgrp.Group
+			var g errgroup.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)
 				if r == "" {
@@ -37,7 +37,7 @@ func NewUpdateFlakeCmd() *cobra.Command {
 // runUpdateFlake walks the directory tree and executes `nix flake update` for each found flake.nix.
 func runUpdateFlake(root string) error {
 	var flakeDirs []string
-	err := utils.WalkDirWithGitignore(root, func(path string, d os.DirEntry, err error) error {
+	err := fsutil.WalkDirWithGitignore(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func runUpdateFlake(root string) error {
 		return nil
 	}
 
-	var g errgrp.Group
+	var g errgroup.Group
 	for _, dir := range flakeDirs {
 		d := dir
 		g.Go(func() error {

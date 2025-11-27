@@ -10,7 +10,7 @@ import (
 	"github.com/shikanime-studio/automata/internal/helm"
 	ikio "github.com/shikanime-studio/automata/internal/kio"
 	"github.com/spf13/cobra"
-	errgrp "golang.org/x/sync/errgroup"
+	"golang.org/x/sync/errgroup"
 )
 
 // NewUpdateCmd creates the umbrella "update" command and wires its subcommands.
