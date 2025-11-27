@@ -44,9 +44,8 @@
             imports = [
               devlib.devenvModules.shikanime-studio
             ];
-            languages.go.enable = true;
 
-            sops.enable = true;
+            languages.go.enable = true;
           };
 
           packages.default = pkgs.buildGoModule {
