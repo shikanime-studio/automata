@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"strings"
 
 	"github.com/shikanime-studio/automata/internal/config"
@@ -13,7 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func NewUpdateAllCmd(ctx context.Context, cfg *config.Config) *cobra.Command {
+func NewUpdateAllCmd(cfg *config.Config) *cobra.Command {
 	return &cobra.Command{
 		Use:   "all [DIR...]",
 		Short: "Run all update operations",
@@ -21,7 +20,7 @@ func NewUpdateAllCmd(ctx context.Context, cfg *config.Config) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cu := container.NewUpdater()
 			hu := helm.NewUpdater()
-			gu := github.NewUpdater(github.NewClient(ctx, cfg))
+			gu := github.NewUpdater(github.NewClient(cmd.Context(), cfg))
 
 			var g errgroup.Group
 			for _, a := range args {
