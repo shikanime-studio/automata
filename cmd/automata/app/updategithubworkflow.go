@@ -18,11 +18,7 @@ func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
 		Short: "Update GitHub Actions in workflows to latest major versions",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			options := []github.ClientOption{}
-			if tok := cfg.GitHubToken(); tok != "" {
-				options = append(options, github.WithAuthToken(tok))
-			}
-			u := github.NewUpdater(github.NewClient(options...))
+			u := github.NewUpdater(github.NewClient(cfg))
 			var g errgroup.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)

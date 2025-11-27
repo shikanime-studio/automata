@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/google/go-github/v55/github"
+	"github.com/shikanime-studio/automata/internal/config"
 	"github.com/shikanime-studio/automata/internal/updater"
 	"golang.org/x/time/rate"
 )
@@ -14,19 +15,6 @@ import (
 type Client struct {
 	c *github.Client
 	l *rate.Limiter
-}
-
-// ClientOptions holds configuration for constructing a GitHubClient.
-type ClientOptions struct {
-	token string
-}
-
-// ClientOption mutates GitHubClientOptions.
-type ClientOption func(*ClientOptions)
-
-// WithAuthToken configures an OAuth token for authenticated GitHub requests.
-func WithAuthToken(token string) ClientOption {
-	return func(o *ClientOptions) { o.token = token }
 }
 
 // NewLimiter creates a new rate limiter for GitHub API calls.
@@ -47,21 +35,16 @@ func NewLimiter(authenticated bool) *rate.Limiter {
 	return limiter
 }
 
-// NewClient creates a new GitHub client with optional authentication.
-func NewClient(opts ...ClientOption) *Client {
-	var o ClientOptions
-	for _, opt := range opts {
-		opt(&o)
-	}
-
-	if o.token != "" {
+// NewClient creates a new GitHub client using configuration.
+func NewClient(cfg *config.Config) *Client {
+	tok := cfg.GitHubToken()
+	if tok != "" {
 		slog.Info("Using authenticated GitHub client")
 		return &Client{
-			c: github.NewClient(nil).WithAuthToken(o.token),
+			c: github.NewClient(nil).WithAuthToken(tok),
 			l: NewLimiter(true),
 		}
 	}
-
 	slog.Warn("Using unauthenticated GitHub client (rate limited)")
 	return &Client{
 		c: github.NewClient(nil),
