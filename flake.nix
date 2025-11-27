@@ -50,6 +50,12 @@
               devlib.devenvModules.shikanime-studio
             ];
 
+            git-hooks.hooks = {
+              govet.enable = true;
+              revive.enable = true;
+              staticcheck.enable = true;
+            };
+
             automata.package = self'.packages.default;
 
             languages.go.enable = true;
