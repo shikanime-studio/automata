@@ -20,7 +20,7 @@ func NewUpdateAllCmd(cfg *config.Config) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cu := container.NewUpdater()
 			hu := helm.NewUpdater()
-			gu := github.NewUpdater(github.NewClient(cfg))
+			gu := github.NewUpdater(github.NewClient(cmd.Context(), cfg))
 
 			var g errgroup.Group
 			for _, a := range args {
@@ -34,7 +34,7 @@ func NewUpdateAllCmd(cfg *config.Config) *cobra.Command {
 					},
 				)
 				g.Go(func() error {
-					return runUpdateSops(r)
+					return runUpdateSops(cmd.Context(), r)
 				})
 				g.Go(func() error {
 					return ikio.UpdateK0sctlConfigs(cmd.Context(), hu, r).Execute()
@@ -43,7 +43,7 @@ func NewUpdateAllCmd(cfg *config.Config) *cobra.Command {
 					return ikio.UpdateGitHubWorkflows(cmd.Context(), gu, r).Execute()
 				})
 				g.Go(func() error {
-					return runUpdateScript(r)
+					return runUpdateScript(cmd.Context(), r)
 				})
 				return g.Wait()
 			}

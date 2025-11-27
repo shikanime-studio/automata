@@ -30,7 +30,7 @@ func UpdateKustomization(
 		},
 		Filters: []kio.Filter{
 			UpdateKustomizationsImages(ctx, u),
-			UpdateKustomizationsLabels(),
+			UpdateKustomizationsLabels(ctx),
 		},
 		Outputs: []kio.Writer{
 			kio.LocalPackageWriter{PackagePath: path},
@@ -133,19 +133,28 @@ func UpdateKustomizationImages(
 			if err = img.PipeE(yaml.SetField("newTag", yaml.NewStringRNode(latest))); err != nil {
 				return nil, fmt.Errorf("set newTag for %s: %w", name, err)
 			}
-			slog.Info("updated image tag", "name", name, "image", imageRef.String(), "tag", latest)
+			slog.InfoContext(
+				ctx,
+				"updated image tag",
+				"name",
+				name,
+				"image",
+				imageRef.String(),
+				"tag",
+				latest,
+			)
 		}
 		return node, nil
 	})
 }
 
 // UpdateKustomizationsLabels sets recommended labels across kustomization files.
-func UpdateKustomizationsLabels() kio.Filter {
+func UpdateKustomizationsLabels(ctx context.Context) kio.Filter {
 	return kio.FilterFunc(func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
 		g := errgroup.Group{}
 		for _, node := range nodes {
 			g.Go(func() error {
-				if err := node.PipeE(UpdateKustomizationLabelsNode()); err != nil {
+				if err := node.PipeE(UpdateKustomizationLabelsNode(ctx)); err != nil {
 					return err
 				}
 				return nil
@@ -159,7 +168,7 @@ func UpdateKustomizationsLabels() kio.Filter {
 }
 
 // UpdateKustomizationLabelsNode sets recommended labels for one kustomization.
-func UpdateKustomizationLabelsNode() yaml.Filter {
+func UpdateKustomizationLabelsNode(ctx context.Context) yaml.Filter {
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
 		imageAnnotationNode, err := node.Pipe(GetImagesAnnotation())
 		if err != nil {
@@ -228,7 +237,16 @@ func UpdateKustomizationLabelsNode() yaml.Filter {
 				if err = node.PipeE(SetRecommandedLabels(name, vers)); err != nil {
 					return nil, fmt.Errorf("set %s: %w", KubernetesVersionLabel, err)
 				}
-				slog.Info("updated recommended labels", "name", name, "image", name, "tag", vers)
+				slog.InfoContext(
+					ctx,
+					"updated recommended labels",
+					"name",
+					name,
+					"image",
+					name,
+					"tag",
+					vers,
+				)
 			}
 		}
 		return node, nil
