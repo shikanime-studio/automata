@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"strings"
 
 	"github.com/shikanime-studio/automata/internal/config"
@@ -13,13 +12,13 @@ import (
 
 // NewUpdateGitHubWorkflowCmd creates the "githubworkflow" command that updates
 // GitHub Actions versions in workflow files.
-func NewUpdateGitHubWorkflowCmd(ctx context.Context, cfg *config.Config) *cobra.Command {
+func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
 	return &cobra.Command{
 		Use:   "githubworkflow [DIR...]",
 		Short: "Update GitHub Actions in workflows to latest major versions",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			u := github.NewUpdater(github.NewClient(ctx, cfg))
+			u := github.NewUpdater(github.NewClient(cmd.Context(), cfg))
 			var g errgroup.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)
