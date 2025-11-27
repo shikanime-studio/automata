@@ -133,15 +133,8 @@ func FindLatestVersion(
 			bestVers = v
 		case updater.Greater:
 			bestVers = v
-		default:
-			slog.DebugContext(
-				ctx,
-				"chart version excluded by strategy",
-				"version",
-				v,
-				"baseline",
-				chart.Version,
-			)
+		case updater.Less:
+			// skip
 		}
 	}
 	return bestVers, nil

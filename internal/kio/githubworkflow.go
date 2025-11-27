@@ -8,11 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/github"
-	update "github.com/shikanime-studio/automata/internal/updater"
 	"golang.org/x/sync/errgroup"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
+
+	"github.com/shikanime-studio/automata/internal/github"
+	update "github.com/shikanime-studio/automata/internal/updater"
 )
 
 // UpdateGitHubWorkflows builds a kyaml pipeline that rewrites a
@@ -101,12 +102,19 @@ func UpdateGitHubWorkflowJob(
 ) yaml.Filter {
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
 		jobNode, err := node.Pipe(yaml.Lookup(name))
-		if err != nil || jobNode == nil {
+		if err != nil {
+			slog.WarnContext(ctx, "failed to lookup job", "job", name, "err", err)
+			return nil, fmt.Errorf("lookup job %s: %w", name, err)
+		}
+		if jobNode == nil {
 			slog.InfoContext(ctx, "skip job without steps", "job", name)
 			return node, nil
 		}
 		stepsNode, err := jobNode.Pipe(yaml.Lookup("steps"))
-		if err != nil || stepsNode == nil {
+		if err != nil {
+			return nil, fmt.Errorf("lookup steps for job %s: %w", name, err)
+		}
+		if stepsNode == nil {
 			return node, nil
 		}
 		stepElems, err := stepsNode.Elements()

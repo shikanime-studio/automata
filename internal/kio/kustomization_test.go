@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"sigs.k8s.io/kustomize/kyaml/yaml"
+
 	"github.com/shikanime-studio/automata/internal/container"
 	update "github.com/shikanime-studio/automata/internal/updater"
-	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 type fakeImageUpdater struct {
@@ -73,7 +74,7 @@ images:
   newName: repo/app
   newTag: release-1-2-3`
 	rn := yaml.MustParse(doc)
-	_, err := UpdateKustomizationLabelsNode().Filter(rn)
+	_, err := UpdateKustomizationLabelsNode(context.Background()).Filter(rn)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

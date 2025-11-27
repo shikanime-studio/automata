@@ -2,6 +2,7 @@
 package fsutil
 
 import (
+	"context"
 	"io/fs"
 	"os/exec"
 	"path/filepath"
@@ -10,7 +11,7 @@ import (
 // IsGitIgnored reports whether the given path is ignored by git relative to
 // the repository root.
 func IsGitIgnored(root, path string) bool {
-	cmd := exec.Command("git", "check-ignore", "-q", "--", path)
+	cmd := exec.CommandContext(context.Background(), "git", "check-ignore", "-q", "--", path)
 	cmd.Dir = root
 	if err := cmd.Run(); err == nil {
 		return true

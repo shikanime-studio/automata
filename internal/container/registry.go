@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
+
 	"github.com/shikanime-studio/automata/internal/updater"
 )
 
@@ -115,15 +116,8 @@ func FindLatestTag(
 			bestTag = tag
 		case updater.Greater:
 			bestTag = tag
-		default:
-			slog.DebugContext(
-				ctx,
-				"tag excluded by update strategy",
-				"baseline",
-				imageRef.Tag,
-				"target",
-				tag,
-			)
+		case updater.Less:
+			// skip
 		}
 	}
 	return bestTag, nil

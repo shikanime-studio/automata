@@ -10,9 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/fsutil"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/shikanime-studio/automata/internal/fsutil"
 )
 
 // NewUpdateSopsCmd encrypts plaintext files to `.enc.` when missing or outdated.
@@ -85,7 +86,7 @@ func runSopsEncrypt(ctx context.Context, plainPath, encPath string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	cmd := exec.CommandContext(ctx, "sops", "--encrypt", plainPath)
 	cmd.Stdout = out

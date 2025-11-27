@@ -5,9 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	"sigs.k8s.io/kustomize/kyaml/yaml"
+
 	"github.com/shikanime-studio/automata/internal/github"
 	update "github.com/shikanime-studio/automata/internal/updater"
-	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 type fakeUpdater struct {
