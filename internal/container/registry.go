@@ -108,7 +108,7 @@ func FindLatestTag(
 		}
 		cmp, err := updater.Compare(imageRef.Tag, tag, o.updateOptions...)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("compare tags: %w", err)
 		}
 		switch cmp {
 		case updater.Equal:

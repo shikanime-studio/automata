@@ -60,7 +60,7 @@ func Compare(baseline, target string, opts ...Option) (Comparison, error) {
 	}
 	targetStrategy, err := Strategy(target, opts...)
 	if err != nil {
-		return 0, err
+		return Less, err
 	}
 	if targetStrategy != baselineStrategy {
 		return Less, nil
@@ -68,11 +68,11 @@ func Compare(baseline, target string, opts ...Option) (Comparison, error) {
 
 	baseline, err = Canonical(baseline, opts...)
 	if err != nil {
-		return 0, err
+		return Less, err
 	}
 	target, err = Canonical(target, opts...)
 	if err != nil {
-		return 0, err
+		return Less, err
 	}
 
 	switch cmp := semver.Compare(baseline, target); {

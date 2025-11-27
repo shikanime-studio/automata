@@ -111,7 +111,7 @@ func (gc *Client) FindLatestActionTag(
 		}
 		cmp, err := updater.Compare(*t.Name, action.Version, o.updateOptions...)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to compare tags: %w", err)
 		}
 		switch cmp {
 		case updater.Equal:

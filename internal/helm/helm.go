@@ -126,7 +126,7 @@ func FindLatestVersion(
 		}
 		cmp, err := updater.Compare(chart.Version, v, o.updateOptions...)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to compare versions: %w", err)
 		}
 		switch cmp {
 		case updater.Equal:
