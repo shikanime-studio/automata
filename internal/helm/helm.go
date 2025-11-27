@@ -2,12 +2,12 @@
 package helm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/shikanime-studio/automata/internal/utils"
 )
@@ -58,41 +58,43 @@ func WithPreRelease(include bool) FindLatestOption {
 }
 
 // ListVersions returns all versions available for the given chart in the repo.
-func ListVersions(chart *ChartRef) ([]string, error) {
-	repoName := sanitizeRepoName(chart.RepoURL)
-	add := exec.Command("helm", "repo", "add", repoName, chart.RepoURL, "--force-update")
-	add.Env = os.Environ()
-	if out, err := add.CombinedOutput(); err != nil {
-		slog.Debug("helm repo add failed", "output", string(out), "error", err)
-		return nil, err
+func ListVersions(ctx context.Context, chart *ChartRef) ([]string, error) {
+	repoAdd := exec.CommandContext(
+		ctx,
+		"helm",
+		"repo",
+		"add",
+		chart.Name,
+		chart.RepoURL,
+		"--force-update",
+	)
+	repoAdd.Env = os.Environ()
+	if err := repoAdd.Run(); err != nil {
+		return nil, fmt.Errorf("helm repo add failed: %w", err)
 	}
-	upd := exec.Command("helm", "repo", "update")
-	upd.Env = os.Environ()
-	if out, err := upd.CombinedOutput(); err != nil {
-		slog.Debug("helm repo update failed", "output", string(out), "error", err)
-		_ = exec.Command("helm", "repo", "remove", repoName).Run()
-		return nil, err
+	repoUpdate := exec.CommandContext(ctx, "helm", "repo", "update")
+	repoUpdate.Env = os.Environ()
+	if err := repoUpdate.Run(); err != nil {
+		return nil, fmt.Errorf("helm repo update failed: %w", err)
 	}
-	search := exec.Command(
+	search := exec.CommandContext(
+		ctx,
 		"helm",
 		"search",
 		"repo",
-		repoName+"/"+chart.Name,
+		chart.Name,
 		"--output",
 		"json",
 		"--versions",
 	)
-	search.Env = os.Environ()
 	out, err := search.Output()
 	if err != nil {
-		_ = exec.Command("helm", "repo", "remove", repoName).Run()
-		return nil, err
+		return nil, fmt.Errorf("helm search repo failed: %w", err)
 	}
-	_ = exec.Command("helm", "repo", "remove", repoName).Run()
 
 	var list []map[string]any
 	if err := json.Unmarshal(out, &list); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("helm search repo unmarshal failed: %w", err)
 	}
 	vers := make([]string, 0, len(list))
 	for _, it := range list {
@@ -104,27 +106,26 @@ func ListVersions(chart *ChartRef) ([]string, error) {
 }
 
 // FindLatestVersion chooses the best matching version according to options.
-func FindLatestVersion(chart *ChartRef, opts ...FindLatestOption) (string, error) {
+func FindLatestVersion(
+	ctx context.Context,
+	chart *ChartRef,
+	opts ...FindLatestOption,
+) (string, error) {
 	o := makeFindLatestOptions(opts...)
-
-	baselineSem, err := utils.Semver(chart.Version)
-	if err != nil {
-		return "", fmt.Errorf("invalid baseline %q: %w", chart.Version, err)
-	}
 
 	var baseline string
 	switch o.updateStrategy {
 	case utils.FullUpdate:
-		baseline = baselineSem
+		baseline = chart.Version
 	case utils.MinorUpdate:
-		baseline = utils.Major(baselineSem)
+		baseline = utils.Major(chart.Version)
 	case utils.PatchUpdate:
-		baseline = utils.MajorMinor(baselineSem)
+		baseline = utils.MajorMinor(chart.Version)
 	default:
-		baseline = baselineSem
+		baseline = chart.Version
 	}
 
-	vers, err := ListVersions(chart)
+	vers, err := ListVersions(ctx, chart)
 	if err != nil {
 		return "", err
 	}
@@ -132,63 +133,45 @@ func FindLatestVersion(chart *ChartRef, opts ...FindLatestOption) (string, error
 	bestRaw := ""
 	bestSem := ""
 	for _, v := range vers {
-		var sem string
-		sem, err = utils.Semver(v)
-		if err != nil {
-			slog.Debug("non-semver chart version ignored", "version", v, "err", err)
-			continue
-		}
-		if !o.includePreRelease && utils.PreRelease(sem) != "" {
-			slog.Debug("prerelease chart version ignored", "version", v, "sem", sem)
+		if !o.includePreRelease && utils.PreRelease(v) != "" {
+			slog.Debug("prerelease chart version ignored", "version", v)
 			continue
 		}
 		if o.exclude != nil {
 			if _, ok := o.exclude[v]; ok {
-				slog.Debug("chart version excluded", "version", v, "sem", sem)
+				slog.Debug("chart version excluded", "version", v)
 				continue
 			}
 		}
-		if utils.Compare(sem, baseline) <= 0 {
+		if utils.Compare(v, baseline) <= 0 {
 			continue
 		}
 		switch o.updateStrategy {
 		case utils.MinorUpdate:
-			if utils.Major(sem) == baseline {
-				if bestSem == "" || utils.Compare(sem, bestSem) > 0 {
-					bestSem = sem
+			if utils.Major(v) == baseline {
+				if bestSem == "" || utils.Compare(v, bestSem) > 0 {
+					bestSem = v
 					bestRaw = v
 				}
 			} else {
-				slog.Debug("chart version excluded by strategy", "version", v, "sem", sem, "baseline", baseline)
+				slog.Debug("chart version excluded by strategy", "version", v, "baseline", baseline)
 			}
 		case utils.PatchUpdate:
-			if utils.MajorMinor(sem) == baseline {
-				if bestSem == "" || utils.Compare(sem, bestSem) > 0 {
-					bestSem = sem
+			if utils.MajorMinor(v) == baseline {
+				if bestSem == "" || utils.Compare(v, bestSem) > 0 {
+					bestSem = v
 					bestRaw = v
 				}
 			} else {
-				slog.Debug("chart version excluded by strategy", "version", v, "sem", sem, "baseline", baseline)
+				slog.Debug("chart version excluded by strategy", "version", v, "baseline", baseline)
 			}
 		default:
-			if bestSem == "" || utils.Compare(sem, bestSem) > 0 {
-				bestSem = sem
+			if bestSem == "" || utils.Compare(v, bestSem) > 0 {
+				bestSem = v
 				bestRaw = v
 			}
 		}
 	}
 
 	return bestRaw, nil
-}
-
-func sanitizeRepoName(u string) string {
-	b := strings.Builder{}
-	for _, r := range u {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
-			b.WriteRune(r)
-		} else {
-			b.WriteRune('-')
-		}
-	}
-	return b.String()
 }

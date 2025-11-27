@@ -8,43 +8,29 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// Semver parses a tag into canonical semver (with leading 'v') or returns an error.
-func Semver(v string) (string, error) {
-	vv := NormalizeSemverPrefix(v)
-	if !semver.IsValid(vv) {
-		return "", fmt.Errorf("invalid semver %q", v)
-	}
-	return vv, nil
-}
-
-// Canonical returns the canonical semver string (with leading 'v').
-func Canonical(v string) string {
-	return semver.Canonical(NormalizeSemverPrefix(v))
-}
-
 // Major returns the major version of a semver string.
 func Major(v string) string {
-	return semver.Major(NormalizeSemverPrefix(v))
+	return semver.Major(NormalizeSemver(v))
 }
 
 // MajorMinor returns the major.minor version of a semver string.
 func MajorMinor(v string) string {
-	return semver.MajorMinor(NormalizeSemverPrefix(v))
+	return semver.MajorMinor(NormalizeSemver(v))
 }
 
 // PreRelease returns true if the semver string is a prerelease.
 func PreRelease(v string) string {
-	return semver.Prerelease(NormalizeSemverPrefix(v))
+	return semver.Prerelease(NormalizeSemver(v))
 }
 
 // Compare compares two semver strings.
 func Compare(a, b string) int {
-	return semver.Compare(NormalizeSemverPrefix(a), NormalizeSemverPrefix(b))
+	return semver.Compare(NormalizeSemver(a), NormalizeSemver(b))
 }
 
-// ParseSemverWithRegex extracts a semver from tag using named capture groups,
+// NormalizeSemverWithRegex extracts a semver from tag using named capture groups,
 // then canonicalizes it by reusing ParseSemver.
-func ParseSemverWithRegex(re *regexp.Regexp, v string) (string, error) {
+func NormalizeSemverWithRegex(re *regexp.Regexp, v string) (string, error) {
 	m := re.FindStringSubmatch(v)
 	if m == nil {
 		return "", fmt.Errorf("no semver match in tag %q using regex %q", v, re.String())
@@ -54,7 +40,7 @@ func ParseSemverWithRegex(re *regexp.Regexp, v string) (string, error) {
 	if raw == "" {
 		raw = parseSemverWithRegex(re, m)
 	}
-	return Semver(raw)
+	return NormalizeSemver(raw), nil
 }
 
 func getSubexpValue(re *regexp.Regexp, m []string, name string) string {
@@ -90,8 +76,8 @@ func parseSemverWithRegex(re *regexp.Regexp, m []string) string {
 	return fmt.Sprintf("v%s", s)
 }
 
-// NormalizeSemverPrefix normalizes a tag to have a leading 'v' and no 'V' prefix.
-func NormalizeSemverPrefix(v string) string {
+// NormalizeSemver normalizes a tag to have a leading 'v' and no 'V' prefix.
+func NormalizeSemver(v string) string {
 	if strings.HasPrefix(v, "V") {
 		return "v" + v[1:]
 	}

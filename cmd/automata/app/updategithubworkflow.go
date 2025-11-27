@@ -4,16 +4,17 @@ import (
 	"strings"
 
 	"github.com/shikanime-studio/automata/internal/config"
-	automatakio "github.com/shikanime-studio/automata/internal/kio"
+	ikio "github.com/shikanime-studio/automata/internal/kio"
 	"github.com/shikanime-studio/automata/internal/vsc"
 	"github.com/spf13/cobra"
+	errgrp "golang.org/x/sync/errgroup"
 )
 
 // NewUpdateGitHubWorkflowCmd creates the "githubworkflow" command that updates
 // GitHub Actions versions in workflow files.
 func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
 	return &cobra.Command{
-		Use:   "githubworkflow DIR...",
+		Use:   "githubworkflow [DIR...]",
 		Short: "Update GitHub Actions in workflows to latest major versions",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -22,16 +23,17 @@ func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
 				options = append(options, vsc.WithAuthToken(tok))
 			}
 			client := vsc.NewGitHubClient(options...)
+			var g errgrp.Group
 			for _, a := range args {
-				root := strings.TrimSpace(a)
-				if root == "" {
+				r := strings.TrimSpace(a)
+				if r == "" {
 					continue
 				}
-				if err := automatakio.UpdateGitHubWorkflows(cmd.Context(), client, root).Execute(); err != nil {
-					return err
-				}
+				g.Go(
+					func() error { return ikio.UpdateGitHubWorkflows(cmd.Context(), client, r).Execute() },
+				)
 			}
-			return nil
+			return g.Wait()
 		},
 	}
 }

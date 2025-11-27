@@ -3,8 +3,9 @@ package app
 import (
 	"strings"
 
-	automatakio "github.com/shikanime-studio/automata/internal/kio"
+	ikio "github.com/shikanime-studio/automata/internal/kio"
 	"github.com/spf13/cobra"
+	errgrp "golang.org/x/sync/errgroup"
 )
 
 // NewUpdateKustomizationCmd updates kustomize image tags across a directory tree.
@@ -12,20 +13,19 @@ import (
 // the images annotation configuration and chosen registry strategy.
 func NewUpdateKustomizationCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "kustomization DIR...",
+		Use:   "kustomization [DIR...]",
 		Short: "Update kustomize image tags",
 		Args:  cobra.MinimumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var g errgrp.Group
 			for _, a := range args {
-				root := strings.TrimSpace(a)
-				if root == "" {
+				r := strings.TrimSpace(a)
+				if r == "" {
 					continue
 				}
-				if err := automatakio.UpdateKustomization(root).Execute(); err != nil {
-					return err
-				}
+				g.Go(func() error { return ikio.UpdateKustomization(cmd.Context(), r).Execute() })
 			}
-			return nil
+			return g.Wait()
 		},
 	}
 }
