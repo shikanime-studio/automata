@@ -76,17 +76,17 @@ func UpdateGitHubWorkflowAction(
 			return nil, fmt.Errorf("lookup jobs: %w", err)
 		}
 		if jobsNode == nil {
-			slog.Info("no jobs found")
+			slog.InfoContext(ctx, "no jobs found")
 			return node, nil
 		}
 		jobNames, err := jobsNode.Fields()
 		if err != nil {
-			slog.Warn("failed to list jobs", "err", err)
+			slog.WarnContext(ctx, "failed to list jobs", "err", err)
 			return nil, fmt.Errorf("get job fields: %w", err)
 		}
 		for _, j := range jobNames {
 			if err := jobsNode.PipeE(UpdateGitHubWorkflowJob(ctx, u, j)); err != nil {
-				slog.Warn("job processing error", "job", j, "err", err)
+				slog.WarnContext(ctx, "job processing error", "job", j, "err", err)
 			}
 		}
 		return node, nil
@@ -102,17 +102,15 @@ func UpdateGitHubWorkflowJob(
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
 		jobNode, err := node.Pipe(yaml.Lookup(name))
 		if err != nil || jobNode == nil {
-			slog.Info("skip job without steps", "job", name)
+			slog.InfoContext(ctx, "skip job without steps", "job", name)
 			return node, nil
 		}
 		stepsNode, err := jobNode.Pipe(yaml.Lookup("steps"))
 		if err != nil || stepsNode == nil {
-			slog.Info("job has no steps", "job", name)
 			return node, nil
 		}
 		stepElems, err := stepsNode.Elements()
 		if err != nil {
-			slog.Warn("failed to get steps", "job", name, "err", err)
 			return nil, fmt.Errorf("get steps: %w", err)
 		}
 		for _, step := range stepElems {
@@ -140,7 +138,7 @@ func UpdateGitHubWorkflowStep(
 		}
 		curr := strings.TrimSpace(yaml.GetValue(usesNode))
 		if curr == "" {
-			slog.Info("empty uses value", "job", name)
+			slog.InfoContext(ctx, "empty uses value", "job", name)
 			return node, nil
 		}
 		actionRef, err := github.ParseActionRef(curr)
@@ -152,7 +150,7 @@ func UpdateGitHubWorkflowStep(
 			return nil, fmt.Errorf("find latest tag: %w", err)
 		}
 		if latest == "" {
-			slog.Info("no suitable tag found", "action", actionRef.String())
+			slog.InfoContext(ctx, "no suitable tag found", "action", actionRef.String())
 			return node, nil
 		}
 		newActionRef := github.ActionRef{
@@ -163,7 +161,7 @@ func UpdateGitHubWorkflowStep(
 		if err := node.PipeE(yaml.SetField("uses", yaml.NewStringRNode(newActionRef.String()))); err != nil {
 			return nil, fmt.Errorf("set uses for %s/%s: %w", actionRef.Owner, actionRef.Repo, err)
 		}
-		slog.Info(
+		slog.InfoContext(ctx,
 			"updated action",
 			"job",
 			name,
