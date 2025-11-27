@@ -1,6 +1,7 @@
 package container
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -12,7 +13,7 @@ import (
 )
 
 // ListTags fetches tags for the given image (auth keychain, fallback anonymous).
-func ListTags(imageRef *ImageRef) ([]string, error) {
+func ListTags(ctx context.Context, imageRef *ImageRef) ([]string, error) {
 	if strings.Contains(imageRef.Name, ":") {
 		return nil, fmt.Errorf(
 			"invalid image name %q: repository must not include a tag; set tag in ImageRef.Tag",
@@ -23,6 +24,7 @@ func ListTags(imageRef *ImageRef) ([]string, error) {
 	tags, err := crane.ListTags(
 		imageRef.Name,
 		crane.WithAuthFromKeychain(authn.DefaultKeychain),
+		crane.WithContext(ctx),
 	)
 	if err != nil {
 		slog.Debug(
@@ -35,6 +37,7 @@ func ListTags(imageRef *ImageRef) ([]string, error) {
 		tags, err = crane.ListTags(
 			imageRef.Name,
 			crane.WithAuth(authn.Anonymous),
+			crane.WithContext(ctx),
 		)
 		if err != nil {
 			slog.Error("list tags failed", "image", imageRef.Name, "err", err)
@@ -96,7 +99,11 @@ func WithPreRelease(include bool) FindLatestOption {
 }
 
 // FindLatestTag returns the latest tag for the given image based on the provided options.
-func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error) {
+func FindLatestTag(
+	ctx context.Context,
+	imageRef *ImageRef,
+	opts ...FindLatestOption,
+) (string, error) {
 	o := makeFindLatestOptions(opts...)
 
 	// Determine baseline according to update strategy
@@ -112,7 +119,7 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 		baseline = imageRef.Tag
 	}
 
-	tags, err := ListTags(imageRef)
+	tags, err := ListTags(ctx, imageRef)
 	if err != nil {
 		return "", fmt.Errorf("list tags: %w", err)
 	}
@@ -123,7 +130,7 @@ func FindLatestTag(imageRef *ImageRef, opts ...FindLatestOption) (string, error)
 		var sem string
 		if o.transformRegex != nil {
 			slog.Debug("attempt semver transform", "tag", t, "regex", o.transformRegex.String())
-			sem, err = utils.ParseSemverWithRegex(o.transformRegex, t)
+			sem, err = utils.NormalizeSemverWithRegex(o.transformRegex, t)
 			if err != nil {
 				slog.Debug(
 					"non-semver tag ignored",

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/shikanime-studio/automata/internal/config"
+	ikio "github.com/shikanime-studio/automata/internal/kio"
 	"github.com/shikanime-studio/automata/internal/vsc"
 	"github.com/spf13/cobra"
 	errgrp "golang.org/x/sync/errgroup"
@@ -46,19 +47,23 @@ func NewUpdateAllCmd(cfg *config.Config) *cobra.Command {
 				rr := r
 				gg.Go(func() error {
 					var g errgrp.Group
-					g.Go(func() error { return runUpdateKustomization(rr) })
+					g.Go(
+						func() error { return ikio.UpdateKustomization(cmd.Context(), rr).Execute() },
+					)
 					g.Go(func() error { return runUpdateSops(rr) })
-					g.Go(func() error { return runUpdateK0sctl(rr) })
+					g.Go(
+						func() error { return ikio.UpdateK0sctlConfigs(cmd.Context(), rr).Execute() },
+					)
 					g.Go(func() error {
 						options := []vsc.GitHubClientOption{}
 						if tok := cfg.GitHubToken(); tok != "" {
 							options = append(options, vsc.WithAuthToken(tok))
 						}
-						return runGitHubUpdateWorkflow(
+						return ikio.UpdateGitHubWorkflows(
 							cmd.Context(),
 							vsc.NewGitHubClient(options...),
 							rr,
-						)
+						).Execute()
 					})
 					g.Go(func() error { return runUpdateScript(rr) })
 					return g.Wait()
