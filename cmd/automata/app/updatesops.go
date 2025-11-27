@@ -40,7 +40,7 @@ func NewUpdateSopsCmd() *cobra.Command {
 // runUpdateSops executes sops encryption updates across the directory tree.
 func runUpdateSops(ctx context.Context, root string) error {
 	var g errgroup.Group
-	err := fsutil.WalkDirWithGitignore(root, func(path string, d fs.DirEntry, err error) error {
+	err := fsutil.WalkDirWithGitignore(ctx, root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

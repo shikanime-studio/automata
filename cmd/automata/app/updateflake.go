@@ -39,7 +39,7 @@ func NewUpdateFlakeCmd() *cobra.Command {
 // runUpdateFlake walks the directory tree and executes `nix flake update` for each found flake.nix.
 func runUpdateFlake(ctx context.Context, root string) error {
 	var flakeDirs []string
-	err := fsutil.WalkDirWithGitignore(root, func(path string, d os.DirEntry, err error) error {
+	err := fsutil.WalkDirWithGitignore(ctx, root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

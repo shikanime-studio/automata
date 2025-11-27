@@ -117,7 +117,16 @@ func FindLatestTag(
 		case updater.Greater:
 			bestTag = tag
 		case updater.Less:
-			// skip
+			slog.DebugContext(
+				ctx,
+				"tag is less than baseline",
+				"tag",
+				tag,
+				"image",
+				imageRef.Name,
+				"baseline",
+				imageRef.Tag,
+			)
 		}
 	}
 	return bestTag, nil
