@@ -8,7 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/vsc"
+	"github.com/shikanime-studio/automata/internal/github"
+	update "github.com/shikanime-studio/automata/internal/updater"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
@@ -19,7 +20,7 @@ import (
 // workflow directory, skipping git-ignored files.
 func UpdateGitHubWorkflows(
 	ctx context.Context,
-	client *vsc.GitHubClient,
+	u update.Updater[*github.ActionRef],
 	path string,
 ) kio.Pipeline {
 	return kio.Pipeline{
@@ -30,7 +31,7 @@ func UpdateGitHubWorkflows(
 			},
 		},
 		Filters: []kio.Filter{
-			UpdateGitHubWorkflowsAction(ctx, client),
+			UpdateGitHubWorkflowsAction(ctx, u),
 		},
 		Outputs: []kio.Writer{
 			kio.LocalPackageWriter{
@@ -40,10 +41,13 @@ func UpdateGitHubWorkflows(
 	}
 }
 
-func UpdateGitHubWorkflowsAction(ctx context.Context, client *vsc.GitHubClient) kio.Filter {
+func UpdateGitHubWorkflowsAction(
+	ctx context.Context,
+	u update.Updater[*github.ActionRef],
+) kio.Filter {
 	return kio.FilterFunc(func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
 		for _, node := range nodes {
-			if err := node.PipeE(UpdateGitHubWorkflowAction(ctx, client)); err != nil {
+			if err := node.PipeE(UpdateGitHubWorkflowAction(ctx, u)); err != nil {
 				return nil, err
 			}
 		}
@@ -54,7 +58,7 @@ func UpdateGitHubWorkflowsAction(ctx context.Context, client *vsc.GitHubClient) 
 // UpdateGitHubWorkflowAction updates all jobs within a single workflow.
 func UpdateGitHubWorkflowAction(
 	ctx context.Context,
-	client *vsc.GitHubClient,
+	u update.Updater[*github.ActionRef],
 ) yaml.Filter {
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
 		jobsNode, err := node.Pipe(yaml.Lookup("jobs"))
@@ -72,7 +76,7 @@ func UpdateGitHubWorkflowAction(
 			return nil, fmt.Errorf("get job fields: %w", err)
 		}
 		for _, j := range jobNames {
-			if err := jobsNode.PipeE(UpdateGitHubWorkflowJob(ctx, client, j)); err != nil {
+			if err := jobsNode.PipeE(UpdateGitHubWorkflowJob(ctx, u, j)); err != nil {
 				slog.Warn("job processing error", "job", j, "err", err)
 			}
 		}
@@ -83,7 +87,7 @@ func UpdateGitHubWorkflowAction(
 // UpdateGitHubWorkflowJob updates all steps within the named job.
 func UpdateGitHubWorkflowJob(
 	ctx context.Context,
-	client *vsc.GitHubClient,
+	u update.Updater[*github.ActionRef],
 	name string,
 ) yaml.Filter {
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
@@ -103,7 +107,7 @@ func UpdateGitHubWorkflowJob(
 			return nil, fmt.Errorf("get steps: %w", err)
 		}
 		for _, step := range stepElems {
-			if err := step.PipeE(UpdateGitHubWorkflowStep(ctx, client, name)); err != nil {
+			if err := step.PipeE(UpdateGitHubWorkflowStep(ctx, u, name)); err != nil {
 				return nil, fmt.Errorf("step processing error: %w", err)
 			}
 		}
@@ -114,7 +118,7 @@ func UpdateGitHubWorkflowJob(
 // UpdateGitHubWorkflowStep updates a step's uses to the latest action tag.
 func UpdateGitHubWorkflowStep(
 	ctx context.Context,
-	client *vsc.GitHubClient,
+	u update.Updater[*github.ActionRef],
 	name string,
 ) yaml.Filter {
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
@@ -130,11 +134,11 @@ func UpdateGitHubWorkflowStep(
 			slog.Info("empty uses value", "job", name)
 			return node, nil
 		}
-		actionRef, err := vsc.ParseGitHubActionRef(curr)
+		actionRef, err := github.ParseActionRef(curr)
 		if err != nil {
 			return nil, fmt.Errorf("parse action ref: %w", err)
 		}
-		latest, err := client.FindLatestActionTag(ctx, actionRef)
+		latest, err := u.Update(ctx, actionRef)
 		if err != nil {
 			return nil, fmt.Errorf("find latest tag: %w", err)
 		}
@@ -142,7 +146,7 @@ func UpdateGitHubWorkflowStep(
 			slog.Info("no suitable tag found", "action", actionRef.String())
 			return node, nil
 		}
-		newActionRef := vsc.GitHubActionRef{
+		newActionRef := github.ActionRef{
 			Owner:   actionRef.Owner,
 			Repo:    actionRef.Repo,
 			Version: latest,

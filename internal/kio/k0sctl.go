@@ -7,11 +7,17 @@ import (
 	"strings"
 
 	"github.com/shikanime-studio/automata/internal/helm"
+	"github.com/shikanime-studio/automata/internal/updater"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-func UpdateK0sctlConfigs(ctx context.Context, path string) kio.Pipeline {
+// UpdateK0sctlConfigs builds a pipeline to update helm chart versions in k0sctl configs.
+func UpdateK0sctlConfigs(
+	ctx context.Context,
+	u updater.Updater[*helm.ChartRef],
+	path string,
+) kio.Pipeline {
 	return kio.Pipeline{
 		Inputs: []kio.Reader{
 			kio.LocalPackageReader{
@@ -20,7 +26,7 @@ func UpdateK0sctlConfigs(ctx context.Context, path string) kio.Pipeline {
 			},
 		},
 		Filters: []kio.Filter{
-			UpdateK0sctlConfigsCharts(ctx),
+			UpdateK0sctlConfigsCharts(ctx, u),
 		},
 		Outputs: []kio.Writer{
 			kio.LocalPackageWriter{PackagePath: path},
@@ -28,10 +34,10 @@ func UpdateK0sctlConfigs(ctx context.Context, path string) kio.Pipeline {
 	}
 }
 
-func UpdateK0sctlConfigsCharts(ctx context.Context) kio.Filter {
+func UpdateK0sctlConfigsCharts(ctx context.Context, u updater.Updater[*helm.ChartRef]) kio.Filter {
 	return kio.FilterFunc(func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
 		for _, node := range nodes {
-			if err := node.PipeE(UpdateK0sctlConfig(ctx)); err != nil {
+			if err := node.PipeE(UpdateK0sctlConfig(ctx, u)); err != nil {
 				return nil, err
 			}
 		}
@@ -39,7 +45,7 @@ func UpdateK0sctlConfigsCharts(ctx context.Context) kio.Filter {
 	})
 }
 
-func UpdateK0sctlConfig(ctx context.Context) yaml.Filter {
+func UpdateK0sctlConfig(ctx context.Context, u updater.Updater[*helm.ChartRef]) yaml.Filter {
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
 		repos := map[string]string{}
 		reposNode, err := node.Pipe(
@@ -68,15 +74,18 @@ func UpdateK0sctlConfig(ctx context.Context) yaml.Filter {
 		chartsNode, err := node.Pipe(
 			yaml.Lookup("spec", "k0s", "config", "spec", "extensions", "helm", "charts"),
 		)
-		if err != nil || chartsNode == nil {
+		if err != nil {
 			return nil, err
+		}
+		if chartsNode == nil {
+			return node, nil
 		}
 		charts, err := chartsNode.Elements()
 		if err != nil {
 			return nil, err
 		}
 		for _, node := range charts {
-			if err := node.PipeE(UpdateK0sctlConfigchart(ctx, repos)); err != nil {
+			if err := node.PipeE(UpdateK0sctlConfigchart(ctx, u, repos)); err != nil {
 				slog.Warn("chart update failed", "err", err)
 			}
 		}
@@ -84,7 +93,12 @@ func UpdateK0sctlConfig(ctx context.Context) yaml.Filter {
 	})
 }
 
-func UpdateK0sctlConfigchart(ctx context.Context, repos map[string]string) yaml.Filter {
+// UpdateK0sctlConfigchart updates a single chart entry version in the config.
+func UpdateK0sctlConfigchart(
+	ctx context.Context,
+	u updater.Updater[*helm.ChartRef],
+	repos map[string]string,
+) yaml.Filter {
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
 		chartNameNode, err := node.Pipe(yaml.Lookup("chart", "name"))
 		if err != nil {
@@ -115,7 +129,7 @@ func UpdateK0sctlConfigchart(ctx context.Context, repos map[string]string) yaml.
 		version := yaml.GetValue(versionNode)
 
 		ref := &helm.ChartRef{RepoURL: repoURL, Name: chartName, Version: version}
-		ver, err := helm.FindLatestVersion(ctx, ref)
+		ver, err := u.Update(ctx, ref)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch chart version: %w", err)
 		}

@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/shikanime-studio/automata/internal/config"
+	"github.com/shikanime-studio/automata/internal/github"
 	ikio "github.com/shikanime-studio/automata/internal/kio"
-	"github.com/shikanime-studio/automata/internal/vsc"
 	"github.com/spf13/cobra"
 	errgrp "golang.org/x/sync/errgroup"
 )
@@ -18,11 +18,11 @@ func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
 		Short: "Update GitHub Actions in workflows to latest major versions",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			options := []vsc.GitHubClientOption{}
+			options := []github.ClientOption{}
 			if tok := cfg.GitHubToken(); tok != "" {
-				options = append(options, vsc.WithAuthToken(tok))
+				options = append(options, github.WithAuthToken(tok))
 			}
-			client := vsc.NewGitHubClient(options...)
+			u := github.NewUpdater(github.NewClient(options...))
 			var g errgrp.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)
@@ -30,7 +30,7 @@ func NewUpdateGitHubWorkflowCmd(cfg *config.Config) *cobra.Command {
 					continue
 				}
 				g.Go(
-					func() error { return ikio.UpdateGitHubWorkflows(cmd.Context(), client, r).Execute() },
+					func() error { return ikio.UpdateGitHubWorkflows(cmd.Context(), u, r).Execute() },
 				)
 			}
 			return g.Wait()

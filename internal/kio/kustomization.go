@@ -6,17 +6,20 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
-	"strings"
 
 	"github.com/shikanime-studio/automata/internal/container"
-	"github.com/shikanime-studio/automata/internal/utils"
+	update "github.com/shikanime-studio/automata/internal/updater"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 // UpdateKustomization creates a kustomize pipeline to update image tags
 // and recommended labels for images defined in the kustomization.yaml at the given directory.
-func UpdateKustomization(ctx context.Context, path string) kio.Pipeline {
+func UpdateKustomization(
+	ctx context.Context,
+	u update.Updater[*container.ImageRef],
+	path string,
+) kio.Pipeline {
 	return kio.Pipeline{
 		Inputs: []kio.Reader{
 			kio.LocalPackageReader{
@@ -25,7 +28,7 @@ func UpdateKustomization(ctx context.Context, path string) kio.Pipeline {
 			},
 		},
 		Filters: []kio.Filter{
-			UpdateKustomizationsImages(ctx),
+			UpdateKustomizationsImages(ctx, u),
 			UpdateKustomizationsLabels(),
 		},
 		Outputs: []kio.Writer{
@@ -34,10 +37,14 @@ func UpdateKustomization(ctx context.Context, path string) kio.Pipeline {
 	}
 }
 
-func UpdateKustomizationsImages(ctx context.Context) kio.Filter {
+// UpdateKustomizationsImages runs image tag updates across kustomization files.
+func UpdateKustomizationsImages(
+	ctx context.Context,
+	u update.Updater[*container.ImageRef],
+) kio.Filter {
 	return kio.FilterFunc(func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
 		for _, node := range nodes {
-			if err := node.PipeE(UpdateKustomizationImages(ctx)); err != nil {
+			if err := node.PipeE(UpdateKustomizationImages(ctx, u)); err != nil {
 				return nil, err
 			}
 		}
@@ -45,7 +52,11 @@ func UpdateKustomizationsImages(ctx context.Context) kio.Filter {
 	})
 }
 
-func UpdateKustomizationImages(ctx context.Context) yaml.Filter {
+// UpdateKustomizationImages updates image tags for one kustomization.
+func UpdateKustomizationImages(
+	ctx context.Context,
+	u update.Updater[*container.ImageRef],
+) yaml.Filter {
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
 		imageAnnotationNode, err := node.Pipe(GetImagesAnnotation())
 		if err != nil {
@@ -81,38 +92,34 @@ func UpdateKustomizationImages(ctx context.Context) yaml.Filter {
 				return nil, fmt.Errorf("get newName for %s: %w", name, err)
 			}
 
-			options := []container.FindLatestOption{}
-			if cfg.StrategyType != utils.FullUpdate {
-				options = append(options, container.WithStrategyType(cfg.StrategyType))
-			}
-			if len(cfg.ExcludeTags) > 0 {
-				options = append(options, container.WithExclude(cfg.ExcludeTags))
-			}
-			if cfg.TagRegex != nil {
-				options = append(options, container.WithTransform(cfg.TagRegex))
+			options := []update.Option{}
+			if cfg.Transform != nil {
+				options = append(options, update.WithTransform(cfg.Transform))
 			}
 
 			imageRef := container.ImageRef{Name: yaml.GetValue(newNameNode)}
 
-			currentTagNode, err := img.Pipe(yaml.Get("newTag"))
+			newTagNode, err := img.Pipe(yaml.Get("newTag"))
 			if err != nil {
 				return nil, fmt.Errorf("get current newTag for %s: %w", name, err)
 			}
-			currentTag := yaml.GetValue(currentTagNode)
-			if currentTag != "" {
-				var version string
-				version, err = utils.NormalizeSemverWithRegex(cfg.TagRegex, currentTag)
-				if err != nil {
-					return nil, fmt.Errorf("parse semver for %s: %w", currentTag, err)
-				}
-				imageRef.Tag = version
+			newTag := yaml.GetValue(newTagNode)
+			if newTag != "" {
+				imageRef.Tag = newTag
 			}
 
-			latest, err := container.FindLatestTag(ctx, &imageRef, options...)
+			excludes := map[string]struct{}{}
+			for _, e := range cfg.Excludes {
+				excludes[e] = struct{}{}
+			}
+			latest, err := u.Update(ctx, &imageRef, options...)
 			if err != nil {
 				return nil, fmt.Errorf("find latest tag: %w", err)
 			}
 			if latest == "" {
+				continue
+			}
+			if _, excluded := excludes[latest]; excluded {
 				continue
 			}
 			if err = img.PipeE(yaml.SetField("newTag", yaml.NewStringRNode(latest))); err != nil {
@@ -199,17 +206,14 @@ func UpdateKustomizationLabelsNode() yaml.Filter {
 					continue
 				}
 
-				var vers string
-				if cfg.TagRegex != nil {
-					vers, err = utils.NormalizeSemverWithRegex(cfg.TagRegex, newTag)
-					if err != nil {
-						return nil, fmt.Errorf("parse semver for %s: %w", newTag, err)
-					}
+				vers, err := update.Canonical(newTag, update.WithTransform(cfg.Transform))
+				if err != nil {
+					return nil, fmt.Errorf("parse semver for %s: %w", newTag, err)
 				}
 				if err = node.PipeE(SetRecommandedLabels(name, vers)); err != nil {
 					return nil, fmt.Errorf("set %s: %w", KubernetesVersionLabel, err)
 				}
-				slog.Info("updated recommended labels", "name", name, "image", name, "tag", newTag)
+				slog.Info("updated recommended labels", "name", name, "image", name, "tag", vers)
 			}
 		}
 		return node, nil
@@ -274,19 +278,17 @@ func SetKustomizationImage(name, newName, newTag string) KustomizationImagesEntr
 
 // KustomizationImagesConfig describes image update behavior from annotation.
 type KustomizationImagesConfig struct {
-	Name         string
-	TagRegex     *regexp.Regexp
-	ExcludeTags  map[string]struct{}
-	StrategyType utils.StrategyType
+	Name      string
+	Transform *regexp.Regexp
+	Excludes  []string
 }
 
 // UnmarshalJSON parses the JSON representation of KustomizationImagesConfig.
 func (c *KustomizationImagesConfig) UnmarshalJSON(data []byte) error {
 	var raw struct {
-		Name         string   `json:"name"`
-		TagRegex     string   `json:"tag-regex"`
-		ExcludeTags  []string `json:"exclude-tags"`
-		StrategyType string   `json:"update-strategy"`
+		Name        string   `json:"name"`
+		TagRegex    string   `json:"tag-regex"`
+		ExcludeTags []string `json:"exclude-tags"`
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
@@ -299,35 +301,11 @@ func (c *KustomizationImagesConfig) UnmarshalJSON(data []byte) error {
 		if err != nil {
 			return fmt.Errorf("invalid tag-regex %q: %w", raw.TagRegex, err)
 		}
-		c.TagRegex = re
-	} else {
-		c.TagRegex = nil
+		c.Transform = re
 	}
 
 	if len(raw.ExcludeTags) > 0 {
-		m := make(map[string]struct{}, len(raw.ExcludeTags))
-		for _, e := range raw.ExcludeTags {
-			m[e] = struct{}{}
-		}
-		c.ExcludeTags = m
-	} else {
-		c.ExcludeTags = nil
-	}
-
-	if raw.StrategyType != "" {
-		switch strings.ToLower(raw.StrategyType) {
-		case "FullUpdate":
-			c.StrategyType = utils.FullUpdate
-		case "MinorUpdate":
-			c.StrategyType = utils.MinorUpdate
-		case "PatchUpdate":
-			c.StrategyType = utils.PatchUpdate
-		default:
-			return fmt.Errorf(
-				"invalid update-strategy %q: must be one of 'Full', 'Minor', 'Patch'",
-				raw.StrategyType,
-			)
-		}
+		c.Excludes = raw.ExcludeTags
 	}
 
 	return nil
