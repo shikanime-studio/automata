@@ -58,6 +58,7 @@
               description = "Automata CLI";
               homepage = "https://github.com/shikanime-studio/automata";
               license = lib.licenses.asl20;
+              mainProgram = "automata";
             };
           };
         };
