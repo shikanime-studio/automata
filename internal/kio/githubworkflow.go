@@ -41,6 +41,7 @@ func UpdateGitHubWorkflows(
 	}
 }
 
+// UpdateGitHubWorkflowsAction applies action updates across workflow files.
 func UpdateGitHubWorkflowsAction(
 	ctx context.Context,
 	u update.Updater[*github.ActionRef],

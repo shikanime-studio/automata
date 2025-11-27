@@ -34,6 +34,7 @@ func UpdateK0sctlConfigs(
 	}
 }
 
+// UpdateK0sctlConfigsCharts runs chart updates across all loaded config files.
 func UpdateK0sctlConfigsCharts(ctx context.Context, u updater.Updater[*helm.ChartRef]) kio.Filter {
 	return kio.FilterFunc(func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
 		for _, node := range nodes {
@@ -45,6 +46,7 @@ func UpdateK0sctlConfigsCharts(ctx context.Context, u updater.Updater[*helm.Char
 	})
 }
 
+// UpdateK0sctlConfig updates charts inside one k0sctl configuration.
 func UpdateK0sctlConfig(ctx context.Context, u updater.Updater[*helm.ChartRef]) yaml.Filter {
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
 		repos := map[string]string{}

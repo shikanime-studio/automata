@@ -6,7 +6,7 @@ import (
 	"github.com/shikanime-studio/automata/internal/helm"
 	ikio "github.com/shikanime-studio/automata/internal/kio"
 	"github.com/spf13/cobra"
-	errgrp "golang.org/x/sync/errgroup"
+	"golang.org/x/sync/errgroup"
 )
 
 // NewUpdateK0sctlCmd updates k0sctl clusters with the latest chart versions.
@@ -17,7 +17,7 @@ func NewUpdateK0sctlCmd() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			u := helm.NewUpdater()
-			var g errgrp.Group
+			var g errgroup.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)
 				if r == "" {
