@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export GOOGLE_GENAI_REPLAYS_DIRECTORY="`blaze info workspace 2>/dev/null`/google/cloud/aiplatform/sdk/genai/replays"
+export GOOGLE_GENAI_REPLAYS_DIRECTORY="$(blaze info workspace 2>/dev/null)/google/cloud/aiplatform/sdk/genai/replays"
 export GOOGLE_GENAI_TESTS_SUBDIR=shared
 
 echo "Replays directory: $GOOGLE_GENAI_REPLAYS_DIRECTORY"

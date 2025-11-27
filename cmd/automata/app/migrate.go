@@ -39,9 +39,9 @@ func NewMigrateCmd(cfg *config.Config) *cobra.Command {
 				g.Go(
 					func() error { return ikio.UpdateGitHubWorkflows(cmd.Context(), gu, rr).Execute() },
 				)
-				g.Go(func() error { return runUpdateSops(rr) })
-				g.Go(func() error { return runUpdateScript(rr) })
-				g.Go(func() error { return runUpdateFlake(rr) })
+				g.Go(func() error { return runUpdateSops(cmd.Context(), rr) })
+				g.Go(func() error { return runUpdateScript(cmd.Context(), rr) })
+				g.Go(func() error { return runUpdateFlake(cmd.Context(), rr) })
 			}
 			return g.Wait()
 		},
