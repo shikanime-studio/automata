@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/shikanime-studio/automata/internal/utils"
+	"github.com/shikanime-studio/automata/internal/updater"
 )
 
 // ChartRef identifies a Helm chart by repository URL, chart name, and version.
@@ -17,44 +17,6 @@ type ChartRef struct {
 	RepoURL string
 	Name    string
 	Version string
-}
-
-// FindLatestOption configures the behavior of FindLatestVersion.
-type FindLatestOption func(*findLatestOptions)
-
-type findLatestOptions struct {
-	exclude           map[string]struct{}
-	updateStrategy    utils.StrategyType
-	includePreRelease bool
-}
-
-func makeFindLatestOptions(opts ...FindLatestOption) *findLatestOptions {
-	o := &findLatestOptions{updateStrategy: utils.FullUpdate}
-	for _, opt := range opts {
-		opt(o)
-	}
-	return o
-}
-
-// WithExclude excludes exact chart versions from consideration.
-func WithExclude(exclude map[string]struct{}) FindLatestOption {
-	return func(o *findLatestOptions) {
-		o.exclude = exclude
-	}
-}
-
-// WithStrategyType sets the update strategy (full/minor/patch).
-func WithStrategyType(strategy utils.StrategyType) FindLatestOption {
-	return func(o *findLatestOptions) {
-		o.updateStrategy = strategy
-	}
-}
-
-// WithPreRelease includes prerelease versions when true.
-func WithPreRelease(include bool) FindLatestOption {
-	return func(o *findLatestOptions) {
-		o.includePreRelease = include
-	}
 }
 
 // ListVersions returns all versions available for the given chart in the repo.
@@ -105,6 +67,39 @@ func ListVersions(ctx context.Context, chart *ChartRef) ([]string, error) {
 	return vers, nil
 }
 
+type findLatestOptions struct {
+	excludes      map[string]struct{}
+	updateOptions []updater.Option
+}
+
+// FindLatestOption configures the search for the latest chart version.
+type FindLatestOption func(*findLatestOptions)
+
+// WithExcludes specifies a list of versions to exclude from the search.
+func WithExcludes(excludes map[string]struct{}) FindLatestOption {
+	return func(o *findLatestOptions) {
+		o.excludes = excludes
+	}
+}
+
+// WithUpdateOptions specifies options to use for version comparison.
+func WithUpdateOptions(opts ...updater.Option) FindLatestOption {
+	return func(o *findLatestOptions) {
+		o.updateOptions = opts
+	}
+}
+
+// makeFindLatestOptions creates a findLatestOptions struct from the provided options.
+func makeFindLatestOptions(opts ...FindLatestOption) findLatestOptions {
+	o := findLatestOptions{
+		excludes: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(&o)
+	}
+	return o
+}
+
 // FindLatestVersion chooses the best matching version according to options.
 func FindLatestVersion(
 	ctx context.Context,
@@ -112,66 +107,42 @@ func FindLatestVersion(
 	opts ...FindLatestOption,
 ) (string, error) {
 	o := makeFindLatestOptions(opts...)
-
-	var baseline string
-	switch o.updateStrategy {
-	case utils.FullUpdate:
-		baseline = chart.Version
-	case utils.MinorUpdate:
-		baseline = utils.Major(chart.Version)
-	case utils.PatchUpdate:
-		baseline = utils.MajorMinor(chart.Version)
-	default:
-		baseline = chart.Version
-	}
-
 	vers, err := ListVersions(ctx, chart)
 	if err != nil {
 		return "", err
 	}
-
-	bestRaw := ""
-	bestSem := ""
+	bestVers := ""
 	for _, v := range vers {
-		if !o.includePreRelease && utils.PreRelease(v) != "" {
-			slog.Debug("prerelease chart version ignored", "version", v)
+		if _, ok := o.excludes[v]; ok {
+			slog.DebugContext(
+				ctx,
+				"chart version excluded by exclude list",
+				"version",
+				v,
+				"baseline",
+				chart.Version,
+			)
 			continue
 		}
-		if o.exclude != nil {
-			if _, ok := o.exclude[v]; ok {
-				slog.Debug("chart version excluded", "version", v)
-				continue
-			}
+		cmp, err := updater.Compare(chart.Version, v, o.updateOptions...)
+		if err != nil {
+			return "", err
 		}
-		if utils.Compare(v, baseline) <= 0 {
-			continue
-		}
-		switch o.updateStrategy {
-		case utils.MinorUpdate:
-			if utils.Major(v) == baseline {
-				if bestSem == "" || utils.Compare(v, bestSem) > 0 {
-					bestSem = v
-					bestRaw = v
-				}
-			} else {
-				slog.Debug("chart version excluded by strategy", "version", v, "baseline", baseline)
-			}
-		case utils.PatchUpdate:
-			if utils.MajorMinor(v) == baseline {
-				if bestSem == "" || utils.Compare(v, bestSem) > 0 {
-					bestSem = v
-					bestRaw = v
-				}
-			} else {
-				slog.Debug("chart version excluded by strategy", "version", v, "baseline", baseline)
-			}
+		switch cmp {
+		case updater.Equal:
+			bestVers = v
+		case updater.Greater:
+			bestVers = v
 		default:
-			if bestSem == "" || utils.Compare(v, bestSem) > 0 {
-				bestSem = v
-				bestRaw = v
-			}
+			slog.DebugContext(
+				ctx,
+				"chart version excluded by strategy",
+				"version",
+				v,
+				"baseline",
+				chart.Version,
+			)
 		}
 	}
-
-	return bestRaw, nil
+	return bestVers, nil
 }

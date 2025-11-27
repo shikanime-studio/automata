@@ -1,11 +1,13 @@
-package vsc
+// Package github provides helpers for GitHub Actions references and API.
+package github
 
 import (
 	"fmt"
 	"strings"
 )
 
-type GitHubActionRef struct {
+// ActionRef represents a parsed GitHub Action reference "owner/repo@version".
+type ActionRef struct {
 	Owner   string
 	Repo    string
 	Version string
@@ -13,12 +15,12 @@ type GitHubActionRef struct {
 
 // String returns the canonical "owner/repo@version" form of the action
 // reference.
-func (a GitHubActionRef) String() string {
+func (a ActionRef) String() string {
 	return fmt.Sprintf("%s/%s@%s", a.Owner, a.Repo, a.Version)
 }
 
-// ParseGitHubActionRef parses a GitHub Actions `uses` string like "owner/repo@v1".
-func ParseGitHubActionRef(uses string) (ref *GitHubActionRef, err error) {
+// ParseActionRef parses a GitHub Actions `uses` string like "owner/repo@v1".
+func ParseActionRef(uses string) (ref *ActionRef, err error) {
 	s := strings.TrimSpace(uses)
 	if s == "" {
 		return nil, fmt.Errorf("empty uses")
@@ -37,5 +39,5 @@ func ParseGitHubActionRef(uses string) (ref *GitHubActionRef, err error) {
 		strings.TrimSpace(pathParts[1]) == "" {
 		return nil, fmt.Errorf("invalid action path %q, expected <owner>/<repo>", path)
 	}
-	return &GitHubActionRef{Owner: pathParts[0], Repo: pathParts[1], Version: version}, nil
+	return &ActionRef{Owner: pathParts[0], Repo: pathParts[1], Version: version}, nil
 }

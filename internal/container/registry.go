@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"regexp"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/shikanime-studio/automata/internal/utils"
+	"github.com/shikanime-studio/automata/internal/updater"
 )
 
 // ListTags fetches tags for the given image (auth keychain, fallback anonymous).
@@ -47,136 +46,85 @@ func ListTags(ctx context.Context, imageRef *ImageRef) ([]string, error) {
 	return tags, nil
 }
 
-// FindLatestOption configures how FindLatestTag filters and selects a tag,
-// including exclusions, update strategy, transforms, and baseline.
-type FindLatestOption func(*findLatestOptions)
-
-type findLatestOptions struct {
-	exclude           map[string]struct{}
-	updateStrategy    utils.StrategyType
-	transformRegex    *regexp.Regexp
-	includePreRelease bool
+type findLatestTagOptions struct {
+	excludes      map[string]struct{}
+	updateOptions []updater.Option
 }
 
-func makeFindLatestOptions(opts ...FindLatestOption) *findLatestOptions {
-	o := &findLatestOptions{updateStrategy: utils.FullUpdate}
+// FindLatestTagOption configures how to select the latest tag.
+type FindLatestTagOption func(*findLatestTagOptions)
+
+// WithExcludes specifies tags to exclude from consideration.
+// WithExcludes specifies a set of tags to exclude from consideration.
+func WithExcludes(excludes map[string]struct{}) FindLatestTagOption {
+	return func(o *findLatestTagOptions) {
+		o.excludes = excludes
+	}
+}
+
+// WithUpdateOptions specifies options to use for version comparison.
+func WithUpdateOptions(opts ...updater.Option) FindLatestTagOption {
+	return func(o *findLatestTagOptions) {
+		o.updateOptions = opts
+	}
+}
+
+// makeFindLatestOptions creates a findLatestTagOptions struct from the provided options.
+func makeFindLatestOptions(opts ...FindLatestTagOption) findLatestTagOptions {
+	o := findLatestTagOptions{
+		excludes: make(map[string]struct{}),
+	}
 	for _, opt := range opts {
-		opt(o)
+		opt(&o)
 	}
 	return o
-}
-
-// WithExclude sets the exclusion list for tags. Any tag present in the map
-// will be ignored when selecting the latest tag.
-func WithExclude(exclude map[string]struct{}) FindLatestOption {
-	return func(o *findLatestOptions) {
-		o.exclude = exclude
-	}
-}
-
-// WithStrategyType sets the tag update strategy (full, minor-only, patch-only)
-// used by FindLatestTag relative to the baseline.
-func WithStrategyType(strategy utils.StrategyType) FindLatestOption {
-	return func(o *findLatestOptions) {
-		o.updateStrategy = strategy
-	}
-}
-
-// WithTransform sets a regular expression used to extract and normalize the
-// semver from raw tags when computing the latest tag.
-func WithTransform(re *regexp.Regexp) FindLatestOption {
-	return func(o *findLatestOptions) {
-		o.transformRegex = re
-	}
-}
-
-// WithPreRelease enables inclusion of prerelease and build metadata tags
-// in the tag selection process.
-func WithPreRelease(include bool) FindLatestOption {
-	return func(o *findLatestOptions) {
-		o.includePreRelease = include
-	}
 }
 
 // FindLatestTag returns the latest tag for the given image based on the provided options.
 func FindLatestTag(
 	ctx context.Context,
 	imageRef *ImageRef,
-	opts ...FindLatestOption,
+	opts ...FindLatestTagOption,
 ) (string, error) {
 	o := makeFindLatestOptions(opts...)
-
-	// Determine baseline according to update strategy
-	var baseline string
-	switch o.updateStrategy {
-	case utils.FullUpdate:
-		baseline = imageRef.Tag
-	case utils.MinorUpdate:
-		baseline = utils.Major(imageRef.Tag)
-	case utils.PatchUpdate:
-		baseline = utils.MajorMinor(imageRef.Tag)
-	default:
-		baseline = imageRef.Tag
-	}
-
 	tags, err := ListTags(ctx, imageRef)
 	if err != nil {
 		return "", fmt.Errorf("list tags: %w", err)
 	}
-
 	bestTag := ""
-	for _, t := range tags {
-		// Skip any non-valid semver
-		var sem string
-		if o.transformRegex != nil {
-			slog.Debug("attempt semver transform", "tag", t, "regex", o.transformRegex.String())
-			sem, err = utils.NormalizeSemverWithRegex(o.transformRegex, t)
-			if err != nil {
-				slog.Debug(
-					"non-semver tag ignored",
-					"tag",
-					t,
-					"regex",
-					o.transformRegex.String(),
-					"err",
-					err,
-				)
-				continue
-			}
-		}
-
-		// Prerelease tags are skipped if not explicitly included
-		if !o.includePreRelease {
-			if utils.PreRelease(sem) != "" {
-				slog.Debug("prerelease tag ignored by pre-release filter", "tag", t, "sem", sem)
-				continue
-			}
-		}
-
-		// Apply exclusion filter
-		if _, ok := o.exclude[t]; ok {
-			slog.Debug("tag excluded by exclude filter", "tag", t, "sem", sem)
+	for _, tag := range tags {
+		if _, ok := o.excludes[tag]; ok {
+			slog.DebugContext(
+				ctx,
+				"tag excluded by exclude list",
+				"tag",
+				tag,
+				"image",
+				imageRef.Name,
+				"baseline",
+				imageRef.Tag,
+			)
 			continue
 		}
-
-		// Consider tags greater or more recent than baseline
-		switch o.updateStrategy {
-		case utils.MinorUpdate:
-			if utils.Major(sem) == baseline {
-				bestTag = t
-			} else {
-				slog.Debug("tag excluded by update strategy", "tag", t, "sem", sem, "baseline", baseline)
-			}
-		case utils.PatchUpdate:
-			if utils.MajorMinor(sem) == baseline {
-				bestTag = t
-			} else {
-				slog.Debug("tag excluded by update strategy", "tag", t, "sem", sem, "baseline", baseline)
-			}
+		cmp, err := updater.Compare(imageRef.Tag, tag, o.updateOptions...)
+		if err != nil {
+			return "", err
+		}
+		switch cmp {
+		case updater.Equal:
+			bestTag = tag
+		case updater.Greater:
+			bestTag = tag
 		default:
-			bestTag = t
+			slog.DebugContext(
+				ctx,
+				"tag excluded by update strategy",
+				"baseline",
+				imageRef.Tag,
+				"target",
+				tag,
+			)
 		}
 	}
-
 	return bestTag, nil
 }
