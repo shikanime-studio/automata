@@ -8,6 +8,7 @@ import (
 
 	"github.com/shikanime-studio/automata/internal/helm"
 	"github.com/shikanime-studio/automata/internal/updater"
+	"golang.org/x/sync/errgroup"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
@@ -37,10 +38,17 @@ func UpdateK0sctlConfigs(
 // UpdateK0sctlConfigsCharts runs chart updates across all loaded config files.
 func UpdateK0sctlConfigsCharts(ctx context.Context, u updater.Updater[*helm.ChartRef]) kio.Filter {
 	return kio.FilterFunc(func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
+		g := errgroup.Group{}
 		for _, node := range nodes {
-			if err := node.PipeE(UpdateK0sctlConfig(ctx, u)); err != nil {
-				return nil, err
-			}
+			g.Go(func() error {
+				if err := node.PipeE(UpdateK0sctlConfig(ctx, u)); err != nil {
+					return err
+				}
+				return nil
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return nil, err
 		}
 		return nodes, nil
 	})
@@ -86,10 +94,17 @@ func UpdateK0sctlConfig(ctx context.Context, u updater.Updater[*helm.ChartRef]) 
 		if err != nil {
 			return nil, err
 		}
+		g := errgroup.Group{}
 		for _, node := range charts {
-			if err := node.PipeE(UpdateK0sctlConfigchart(ctx, u, repos)); err != nil {
-				slog.Warn("chart update failed", "err", err)
-			}
+			g.Go(func() error {
+				if err := node.PipeE(UpdateK0sctlConfigchart(ctx, u, repos)); err != nil {
+					slog.WarnContext(ctx, "chart update failed", "err", err)
+				}
+				return nil
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return nil, err
 		}
 		return node, nil
 	})

@@ -56,11 +56,11 @@ const (
 func Compare(baseline, target string, opts ...Option) (Comparison, error) {
 	baselineStrategy, err := Strategy(baseline, opts...)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to determine strategy for baseline %q: %w", baseline, err)
 	}
 	targetStrategy, err := Strategy(target, opts...)
 	if err != nil {
-		return Less, err
+		return Less, nil
 	}
 	if targetStrategy != baselineStrategy {
 		return Less, nil
@@ -68,11 +68,11 @@ func Compare(baseline, target string, opts ...Option) (Comparison, error) {
 
 	baseline, err = Canonical(baseline, opts...)
 	if err != nil {
-		return Less, err
+		return Less, fmt.Errorf("failed to canonicalize baseline %q: %w", baseline, err)
 	}
 	target, err = Canonical(target, opts...)
 	if err != nil {
-		return Less, err
+		return Less, fmt.Errorf("failed to canonicalize target %q: %w", target, err)
 	}
 
 	switch cmp := semver.Compare(baseline, target); {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/shikanime-studio/automata/internal/container"
 	update "github.com/shikanime-studio/automata/internal/updater"
+	"golang.org/x/sync/errgroup"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
@@ -43,10 +44,17 @@ func UpdateKustomizationsImages(
 	u update.Updater[*container.ImageRef],
 ) kio.Filter {
 	return kio.FilterFunc(func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
+		g := errgroup.Group{}
 		for _, node := range nodes {
-			if err := node.PipeE(UpdateKustomizationImages(ctx, u)); err != nil {
-				return nil, err
-			}
+			g.Go(func() error {
+				if err := node.PipeE(UpdateKustomizationImages(ctx, u)); err != nil {
+					return err
+				}
+				return nil
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return nil, err
 		}
 		return nodes, nil
 	})
@@ -134,10 +142,17 @@ func UpdateKustomizationImages(
 // UpdateKustomizationsLabels sets recommended labels across kustomization files.
 func UpdateKustomizationsLabels() kio.Filter {
 	return kio.FilterFunc(func(nodes []*yaml.RNode) ([]*yaml.RNode, error) {
+		g := errgroup.Group{}
 		for _, node := range nodes {
-			if err := node.PipeE(UpdateKustomizationLabelsNode()); err != nil {
-				return nil, err
-			}
+			g.Go(func() error {
+				if err := node.PipeE(UpdateKustomizationLabelsNode()); err != nil {
+					return err
+				}
+				return nil
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return nil, err
 		}
 		return nodes, nil
 	})
