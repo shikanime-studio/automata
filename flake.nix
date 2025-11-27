@@ -53,12 +53,6 @@
 
             automata.package = self'.packages.default;
 
-            git-hooks.hooks = {
-              govet.enable = true;
-              revive.enable = true;
-              staticcheck.enable = true;
-            };
-
             languages.go.enable = true;
           };
 
