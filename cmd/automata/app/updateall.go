@@ -3,15 +3,17 @@ package app
 import (
 	"strings"
 
+	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/shikanime-studio/automata/internal/config"
 	"github.com/shikanime-studio/automata/internal/container"
 	"github.com/shikanime-studio/automata/internal/github"
 	"github.com/shikanime-studio/automata/internal/helm"
 	ikio "github.com/shikanime-studio/automata/internal/kio"
-	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 )
 
+// NewUpdateAllCmd returns a command that runs all update operations over directories.
 func NewUpdateAllCmd(cfg *config.Config) *cobra.Command {
 	return &cobra.Command{
 		Use:   "all [DIR...]",

@@ -6,9 +6,10 @@ import (
 	"log/slog"
 
 	"github.com/google/go-github/v55/github"
+	"golang.org/x/time/rate"
+
 	"github.com/shikanime-studio/automata/internal/config"
 	"github.com/shikanime-studio/automata/internal/updater"
-	"golang.org/x/time/rate"
 )
 
 // Client wraps the go-github client with a rate limiter and datastore.

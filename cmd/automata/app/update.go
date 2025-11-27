@@ -2,8 +2,9 @@
 package app
 
 import (
-	"github.com/shikanime-studio/automata/internal/config"
 	"github.com/spf13/cobra"
+
+	"github.com/shikanime-studio/automata/internal/config"
 )
 
 // NewUpdateCmd creates the umbrella "update" command and wires its subcommands.
