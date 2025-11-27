@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -19,7 +20,7 @@ func NewUpdateFlakeCmd() *cobra.Command {
 		Use:   "flake [DIR...]",
 		Short: "Run nix flake update where flake.nix exists",
 		Args:  cobra.MinimumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			var g errgroup.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)
@@ -27,7 +28,7 @@ func NewUpdateFlakeCmd() *cobra.Command {
 					continue
 				}
 				rr := r
-				g.Go(func() error { return runUpdateFlake(rr) })
+				g.Go(func() error { return runUpdateFlake(cmd.Context(), rr) })
 			}
 			return g.Wait()
 		},
@@ -35,7 +36,7 @@ func NewUpdateFlakeCmd() *cobra.Command {
 }
 
 // runUpdateFlake walks the directory tree and executes `nix flake update` for each found flake.nix.
-func runUpdateFlake(root string) error {
+func runUpdateFlake(ctx context.Context, root string) error {
 	var flakeDirs []string
 	err := fsutil.WalkDirWithGitignore(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -54,7 +55,7 @@ func runUpdateFlake(root string) error {
 	}
 
 	if len(flakeDirs) == 0 {
-		slog.Info("no flake.nix files found", "root", root)
+		slog.InfoContext(ctx, "no flake.nix files found", "root", root)
 		return nil
 	}
 
@@ -62,20 +63,20 @@ func runUpdateFlake(root string) error {
 	for _, dir := range flakeDirs {
 		d := dir
 		g.Go(func() error {
-			slog.Info("running nix flake update", "dir", d)
-			cmd := exec.Command("nix", "flake", "update")
+			slog.InfoContext(ctx, "running nix flake update", "dir", d)
+			cmd := exec.CommandContext(ctx, "nix", "flake", "update")
 			cmd.Dir = d
 			cmd.Env = os.Environ()
 
 			out, runErr := cmd.CombinedOutput()
 			if len(out) > 0 {
-				slog.Info("nix flake update output", "dir", d, "output", string(out))
+				slog.InfoContext(ctx, "nix flake update output", "dir", d, "output", string(out))
 			}
 			if runErr != nil {
-				slog.Warn("nix flake update failed", "dir", d, "err", runErr)
+				slog.WarnContext(ctx, "nix flake update failed", "dir", d, "err", runErr)
 				return fmt.Errorf("nix flake update in %s: %w", d, runErr)
 			}
-			slog.Info("nix flake update completed", "dir", d)
+			slog.InfoContext(ctx, "nix flake update completed", "dir", d)
 			return nil
 		})
 	}

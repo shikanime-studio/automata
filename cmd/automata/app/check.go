@@ -15,7 +15,7 @@ func NewCheckCmd() *cobra.Command {
 		Use:   "check [DIR...]",
 		Short: "Run nix flake check with fix loop until success",
 		Args:  cobra.MinimumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			var g errgroup.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)
@@ -23,7 +23,7 @@ func NewCheckCmd() *cobra.Command {
 					continue
 				}
 				rr := r
-				g.Go(func() error { return runCheckLifecycle(context.Background(), rr) })
+				g.Go(func() error { return runCheckLifecycle(cmd.Context(), rr) })
 			}
 			return g.Wait()
 		},
