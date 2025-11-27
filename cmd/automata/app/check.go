@@ -41,14 +41,14 @@ func runCheckLifecycle(ctx context.Context, root string) error {
 			lastErr = err
 			slog.Warn("check failed; attempting fixes", "dir", root, "iteration", i, "err", err)
 		}
-		if err := runUpdateFlake(root); err != nil {
-			slog.Warn("update flake failed", "dir", root, "err", err)
+		if err := runUpdateFlake(ctx, root); err != nil {
+			slog.WarnContext(ctx, "update flake failed", "dir", root, "err", err)
 		}
-		if err := runUpdateScript(root); err != nil {
-			slog.Warn("update script failed", "dir", root, "err", err)
+		if err := runUpdateScript(ctx, root); err != nil {
+			slog.WarnContext(ctx, "update script failed", "dir", root, "err", err)
 		}
-		if err := runUpdateSops(root); err != nil {
-			slog.Warn("update sops failed", "dir", root, "err", err)
+		if err := runUpdateSops(ctx, root); err != nil {
+			slog.WarnContext(ctx, "update sops failed", "dir", root, "err", err)
 		}
 	}
 	return lastErr
