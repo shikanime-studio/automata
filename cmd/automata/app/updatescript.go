@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -19,7 +20,7 @@ func NewUpdateScriptCmd() *cobra.Command {
 		Use:   "updatescript [DIR...]",
 		Short: "Run all update.sh scripts",
 		Args:  cobra.MinimumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			var g errgroup.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)
@@ -27,7 +28,7 @@ func NewUpdateScriptCmd() *cobra.Command {
 					continue
 				}
 				rr := r
-				g.Go(func() error { return runUpdateScript(rr) })
+				g.Go(func() error { return runUpdateScript(cmd.Context(), rr) })
 			}
 			return g.Wait()
 		},
@@ -35,7 +36,7 @@ func NewUpdateScriptCmd() *cobra.Command {
 }
 
 // runUpdateScript walks the directory tree starting at root and executes every update.sh found.
-func runUpdateScript(root string) error {
+func runUpdateScript(ctx context.Context, root string) error {
 	var scripts []string
 	err := fsutil.WalkDirWithGitignore(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -54,7 +55,7 @@ func runUpdateScript(root string) error {
 	}
 
 	if len(scripts) == 0 {
-		slog.Info("no update.sh scripts found", "root", root)
+		slog.InfoContext(ctx, "no update.sh scripts found", "root", root)
 		return nil
 	}
 	var g errgroup.Group
@@ -62,20 +63,20 @@ func runUpdateScript(root string) error {
 		s := script
 		g.Go(func() error {
 			dir := filepath.Dir(s)
-			slog.Info("running update script", "script", s)
-			cmd := exec.Command("bash", "update.sh")
+			slog.InfoContext(ctx, "running update script", "script", s)
+			cmd := exec.CommandContext(ctx, "update.sh")
 			cmd.Dir = dir
 			cmd.Env = os.Environ()
 
 			out, runErr := cmd.CombinedOutput()
 			if len(out) > 0 {
-				slog.Info("update.sh output", "script", s, "output", string(out))
+				slog.InfoContext(ctx, "update.sh output", "script", s, "output", string(out))
 			}
 			if runErr != nil {
-				slog.Warn("update.sh failed", "script", s, "err", runErr)
+				slog.WarnContext(ctx, "update.sh failed", "script", s, "err", runErr)
 				return fmt.Errorf("run %s: %w", s, runErr)
 			}
-			slog.Info("update script completed", "script", s)
+			slog.InfoContext(ctx, "update script completed", "script", s)
 			return nil
 		})
 	}

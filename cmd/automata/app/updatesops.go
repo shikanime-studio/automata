@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -20,7 +21,7 @@ func NewUpdateSopsCmd() *cobra.Command {
 		Use:   "sops [DIR...]",
 		Short: "Encrypt plaintext files to .enc.* when outdated",
 		Args:  cobra.MinimumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			var g errgroup.Group
 			for _, a := range args {
 				r := strings.TrimSpace(a)
@@ -28,7 +29,7 @@ func NewUpdateSopsCmd() *cobra.Command {
 					continue
 				}
 				rr := r
-				g.Go(func() error { return runUpdateSops(rr) })
+				g.Go(func() error { return runUpdateSops(cmd.Context(), rr) })
 			}
 			return g.Wait()
 		},
@@ -36,7 +37,7 @@ func NewUpdateSopsCmd() *cobra.Command {
 }
 
 // runUpdateSops executes sops encryption updates across the directory tree.
-func runUpdateSops(root string) error {
+func runUpdateSops(ctx context.Context, root string) error {
 	var g errgroup.Group
 	err := fsutil.WalkDirWithGitignore(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -58,35 +59,35 @@ func runUpdateSops(root string) error {
 		if !shouldEncrypt {
 			return nil
 		}
-		g.Go(createSopsEncryptJob(plainPath, path))
+		g.Go(createSopsEncryptJob(ctx, plainPath, path))
 		return nil
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("scan for encrypted files: %w", err)
 	}
 	return g.Wait()
 }
 
 // createSopsEncryptJob creates a task to encrypt one file pair.
-func createSopsEncryptJob(plainPath, encPath string) func() error {
+func createSopsEncryptJob(ctx context.Context, plainPath, encPath string) func() error {
 	return func() error {
-		if err := runSopsEncrypt(plainPath, encPath); err != nil {
+		if err := runSopsEncrypt(ctx, plainPath, encPath); err != nil {
 			return fmt.Errorf("sops encrypt %s -> %s: %w", plainPath, encPath, err)
 		}
-		slog.Info("sops encrypted file", "plain", plainPath, "enc", encPath)
+		slog.InfoContext(ctx, "sops encrypted file", "plain", plainPath, "enc", encPath)
 		return nil
 	}
 }
 
 // runSopsEncrypt writes `sops --encrypt` output from `plainPath` to `encPath`.
-func runSopsEncrypt(plainPath, encPath string) error {
+func runSopsEncrypt(ctx context.Context, plainPath, encPath string) error {
 	out, err := os.Create(encPath)
 	if err != nil {
 		return err
 	}
 	defer out.Close()
 
-	cmd := exec.Command("sops", "--encrypt", plainPath)
+	cmd := exec.CommandContext(ctx, "sops", "--encrypt", plainPath)
 	cmd.Stdout = out
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
