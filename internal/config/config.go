@@ -3,6 +3,7 @@ package config
 
 import (
 	"log/slog"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -18,6 +19,7 @@ func New() (*Config, error) {
 	v.SetDefault("log_level", "info")
 	v.SetDefault("log_format", "text")
 	v.SetDefault("log_source", false)
+	v.SetDefault("model_name", "gemini-3-pro-preview")
 
 	if err := v.BindEnv("log_level", "LOG_LEVEL"); err != nil {
 		return nil, err
@@ -29,6 +31,12 @@ func New() (*Config, error) {
 		return nil, err
 	}
 	if err := v.BindEnv("github_token", "GITHUB_TOKEN"); err != nil {
+		return nil, err
+	}
+	if err := v.BindEnv("google_api_key", "GOOGLE_API_KEY"); err != nil {
+		return nil, err
+	}
+	if err := v.BindEnv("model_name", "MODEL_NAME"); err != nil {
 		return nil, err
 	}
 
@@ -74,4 +82,16 @@ func (c *Config) LogSource() bool {
 // GitHubToken returns the GitHub token from config.
 func (c *Config) GitHubToken() string {
 	return c.v.GetString("github_token")
+}
+
+func (c *Config) GoogleAPIKey() string {
+	return c.v.GetString("google_api_key")
+}
+
+func (c *Config) ModelName() string {
+	s := strings.TrimSpace(c.v.GetString("llm_model_name"))
+	if s == "" {
+		return "gemini-3-pro-preview"
+	}
+	return s
 }
