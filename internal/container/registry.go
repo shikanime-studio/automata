@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
+
 	"github.com/shikanime-studio/automata/internal/updater"
 )
 

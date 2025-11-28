@@ -12,13 +12,15 @@ import (
 )
 
 var (
-	ErrPolicyRejection = errors.New("policy rejection")
-	ErrTypeMismatch    = errors.New("type mismatch")
-	ErrInvalidTarget   = errors.New("invalid target version")
+    ErrPolicyRejection = errors.New("policy rejection")
+    ErrTypeMismatch    = errors.New("type mismatch")
+    ErrInvalidTarget   = errors.New("invalid target version")
 )
 
+// IsNotValid reports whether the error denotes an invalid target, policy rejection,
+// or type mismatch encountered during version comparison.
 func IsNotValid(err error) bool {
-	return errors.Is(err, ErrInvalidTarget) || errors.Is(err, ErrPolicyRejection) || errors.Is(err, ErrTypeMismatch)
+    return errors.Is(err, ErrInvalidTarget) || errors.Is(err, ErrPolicyRejection) || errors.Is(err, ErrTypeMismatch)
 }
 
 type options struct {
@@ -31,15 +33,17 @@ type Option = func(*options)
 
 // WithTransform uses a regex with named groups to extract semver parts.
 func WithTransform(re *regexp.Regexp) Option {
-	return func(o *options) {
-		o.transformRegex = re
-	}
+    return func(o *options) {
+        o.transformRegex = re
+    }
 }
 
+// WithPolicy sets an update policy used to validate whether a target version
+// complies with the baseline's required policy.
 func WithPolicy(ut PolicyType) Option {
-	return func(o *options) {
-		o.policy = &ut
-	}
+    return func(o *options) {
+        o.policy = &ut
+    }
 }
 
 func makeOptions(opts ...Option) options {
@@ -112,10 +116,10 @@ type VersionType int
 
 // TypeType values for selecting update behavior.
 const (
-	CanonicalVersion VersionType = iota
-	MajorMinorVersion
-	MajorVersion
-	PreReleaseVersion
+    CanonicalVersion VersionType = iota
+    MajorMinorVersion
+    MajorVersion
+    PreReleaseVersion
 )
 
 // Type determines the update strategy for a version string.
@@ -169,7 +173,8 @@ func Type(v string, opts ...Option) (VersionType, error) {
 	}
 }
 
-// Canonical normalizes a tag to have a leading 'v' and no 'V' prefix.
+// Canonical normalizes a tag to have a leading 'v' and converts an uppercase
+// 'V' prefix to lowercase.
 func Canonical(v string, opts ...Option) (string, error) {
 	o := makeOptions(opts...)
 
@@ -234,17 +239,19 @@ func canonicalWithRegex(re *regexp.Regexp, m []string) string {
 
 type PolicyType int
 
+// PolicyType values classify upgrade policy derived from the baseline version.
 const (
-	MajorRelease PolicyType = iota
-	PathRelease
-	MinorRelease
+    MajorRelease PolicyType = iota
+    PathRelease
+    MinorRelease
 )
 
+// Policy returns the upgrade policy for the given baseline semantic version.
 func Policy(baseline string) (PolicyType, error) {
-	major, minor, patch, err := semverParts(baseline)
-	if err != nil {
-		return MajorRelease, err
-	}
+    major, minor, patch, err := semverParts(baseline)
+    if err != nil {
+        return MajorRelease, err
+    }
 	if major == 0 && minor == 0 && patch > 0 {
 		return PathRelease, nil
 	}
@@ -272,13 +279,13 @@ func semverParts(v string) (int, int, int, error) {
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	min, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, 0, 0, err
-	}
-	pat, err := strconv.Atoi(parts[2])
-	if err != nil {
-		return 0, 0, 0, err
-	}
-	return maj, min, pat, nil
+    minorInt, err := strconv.Atoi(parts[1])
+    if err != nil {
+        return 0, 0, 0, err
+    }
+    pat, err := strconv.Atoi(parts[2])
+    if err != nil {
+        return 0, 0, 0, err
+    }
+    return maj, minorInt, pat, nil
 }
