@@ -96,7 +96,6 @@ func (gc *Client) FindLatestActionTag(
 		return "", fmt.Errorf("github list tags: %w", err)
 	}
 	bestTag := action.Version
-	fmt.Printf("current: %q\n", bestTag)
 	for _, t := range tags {
 		if _, ok := o.excludes[*t.Name]; ok {
 			slog.DebugContext(
