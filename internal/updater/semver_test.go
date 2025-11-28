@@ -1,8 +1,8 @@
 package updater
 
 import (
-    "regexp"
-    "testing"
+	"regexp"
+	"testing"
 )
 
 func TestType_DetectsTypes(t *testing.T) {
@@ -86,16 +86,16 @@ func TestCompare_MajorUpdate(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.baseline+"->"+c.target, func(t *testing.T) {
-            got, err := Compare(c.baseline, c.target)
-            if err != nil {
-                if !IsNotValid(err) {
-                    t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
-                }
-                return
-            }
-            if got != c.want {
-                t.Fatalf("Compare(%q,%q)=%v want %v", c.baseline, c.target, got, c.want)
-            }
+			got, err := Compare(c.baseline, c.target)
+			if err != nil {
+				if !IsNotValid(err) {
+					t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
+				}
+				return
+			}
+			if got != c.want {
+				t.Fatalf("Compare(%q,%q)=%v want %v", c.baseline, c.target, got, c.want)
+			}
 		})
 	}
 }
@@ -114,16 +114,16 @@ func TestCompare_MajorMinorUpdate(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.baseline+"->"+c.target, func(t *testing.T) {
-            got, err := Compare(c.baseline, c.target)
-            if err != nil {
-                if !IsNotValid(err) {
-                    t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
-                }
-                return
-            }
-            if got != c.want {
-                t.Fatalf("Compare(%q,%q)=%v want %v", c.baseline, c.target, got, c.want)
-            }
+			got, err := Compare(c.baseline, c.target)
+			if err != nil {
+				if !IsNotValid(err) {
+					t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
+				}
+				return
+			}
+			if got != c.want {
+				t.Fatalf("Compare(%q,%q)=%v want %v", c.baseline, c.target, got, c.want)
+			}
 		})
 	}
 }
@@ -142,31 +142,31 @@ func TestCompare_CanonicalUpdate(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.baseline+"->"+c.target, func(t *testing.T) {
-            got, err := Compare(c.baseline, c.target)
-            if err != nil {
-                if !IsNotValid(err) {
-                    t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
-                }
-                return
-            }
-            if got != c.want {
-                t.Fatalf("Compare(%q,%q)=%v want %v", c.baseline, c.target, got, c.want)
-            }
+			got, err := Compare(c.baseline, c.target)
+			if err != nil {
+				if !IsNotValid(err) {
+					t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
+				}
+				return
+			}
+			if got != c.want {
+				t.Fatalf("Compare(%q,%q)=%v want %v", c.baseline, c.target, got, c.want)
+			}
 		})
 	}
 }
 
 func TestCompare_TargetError(t *testing.T) {
 	re := regexp.MustCompile(`^.*(?P<version>v\d+(?:\.\d+){0,2}(?:-[^+]+)?(?:\+.+)?)$`)
-    _, err := Compare("v1.1.1", "1.1.2", WithTransform(re))
-    if err == nil {
-        t.Fatalf("expected error, got nil")
-    }
-    if !IsNotValid(err) {
-        t.Fatalf("expected invalid target error, got %v", err)
-    }
+	_, err := Compare("v1.1.1", "1.1.2", WithTransform(re))
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if !IsNotValid(err) {
+		t.Fatalf("expected invalid target error, got %v", err)
+	}
 }
-func TestUpdatePolicy(t *testing.T) {
+func TestPolicy(t *testing.T) {
 	cases := map[string]PolicyType{
 		"v0.0.1": PathRelease,
 		"0.0.5":  PathRelease,
@@ -180,10 +180,10 @@ func TestUpdatePolicy(t *testing.T) {
 		t.Run(v, func(t *testing.T) {
 			got, err := Policy(v)
 			if err != nil {
-				t.Fatalf("UpdatePolicy(%q) error: %v", v, err)
+				t.Fatalf("Policy(%q) error: %v", v, err)
 			}
 			if got != want {
-				t.Fatalf("UpdatePolicy(%q)=%v want %v", v, got, want)
+				t.Fatalf("Policy(%q)=%v want %v", v, got, want)
 			}
 		})
 	}
