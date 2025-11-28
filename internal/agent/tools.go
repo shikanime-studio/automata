@@ -2,12 +2,13 @@ package agent
 
 import (
 	"bufio"
-	"context"
+	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
-	"strings"
+	"strconv"
 
 	"google.golang.org/adk/tool"
 	"google.golang.org/adk/tool/functiontool"
@@ -15,193 +16,39 @@ import (
 	"github.com/shikanime-studio/automata/internal/fsutil"
 )
 
-type (
-	readArgs   struct{ Path string }
-	readResult struct{ Content string }
-)
-
-// NewReadFileTool returns a tool that reads a file and returns its content.
-func NewReadFileTool() (tool.Tool, error) {
-	return functiontool.New(functiontool.Config{
-		Name:        "read_file",
-		Description: "Read a file and return its content",
-	}, func(_ tool.Context, in readArgs) (readResult, error) {
-		b, err := os.ReadFile(in.Path)
-		if err != nil {
-			return readResult{}, err
-		}
-		return readResult{Content: string(b)}, nil
-	})
+// Seek text tool combines reading and searching capabilities.
+type seekArgs struct {
+	Root           string
+	Pattern        string
+	Glob           string
+	IncludeContent bool
+	MaxFiles       int
 }
-
-type writeArgs struct {
+type seekHit struct {
+	Line int
+	Text string
+}
+type seekFile struct {
 	Path    string
+	Hits    []seekHit
 	Content string
 }
-type writeResult struct{ Bytes int }
+type seekResult struct{ Files []seekFile }
 
-// NewWriteFileTool returns a tool that writes content to a file.
-func NewWriteFileTool() (tool.Tool, error) {
-	return functiontool.New(functiontool.Config{
-		Name:        "write_file",
-		Description: "Write content to a file, creating it if needed",
-	}, func(_ tool.Context, in writeArgs) (writeResult, error) {
-		if err := os.MkdirAll(filepath.Dir(in.Path), 0o755); err != nil {
-			return writeResult{}, err
-		}
-		if err := os.WriteFile(in.Path, []byte(in.Content), 0o644); err != nil {
-			return writeResult{}, err
-		}
-		return writeResult{Bytes: len(in.Content)}, nil
-	})
-}
-
-type replaceArgs struct {
-	Path    string
-	Pattern string
-	Replace string
-}
-type replaceResult struct{ Count int }
-
-// NewReplaceTextTool returns a tool that performs regex replacements in a file.
-func NewReplaceTextTool() (tool.Tool, error) {
-	return functiontool.New[replaceArgs, replaceResult](functiontool.Config{
-		Name:        "replace_text",
-		Description: "Regex replace occurrences in a file",
-	}, func(_ tool.Context, in replaceArgs) (replaceResult, error) {
+// NewSeekTextTool returns a tool that searches for a regex in files and, when requested,
+// includes the full content of matched files. It honors .gitignore and supports glob filters.
+func NewSeekTextTool() (tool.Tool, error) {
+	return functiontool.New[seekArgs, seekResult](functiontool.Config{
+		Name:        "seek_text",
+		Description: "Search files with regex (honors .gitignore) and optionally include matched file content",
+	}, func(tc tool.Context, in seekArgs) (seekResult, error) {
 		re, err := regexp.Compile(in.Pattern)
 		if err != nil {
-			return replaceResult{}, err
+			return seekResult{}, err
 		}
-		b, err := os.ReadFile(in.Path)
-		if err != nil {
-			return replaceResult{}, err
-		}
-		s := string(b)
-		idx := re.FindAllStringIndex(s, -1)
-		out := re.ReplaceAllString(s, in.Replace)
-		if err := os.WriteFile(in.Path, []byte(out), 0o644); err != nil {
-			return replaceResult{}, err
-		}
-		return replaceResult{Count: len(idx)}, nil
-	})
-}
-
-type insertArgs struct {
-	Path string
-	Line int
-	Text string
-}
-type insertResult struct{ Lines int }
-
-// NewInsertTextTool returns a tool that inserts text at a given line number.
-func NewInsertTextTool() (tool.Tool, error) {
-	return functiontool.New[insertArgs, insertResult](functiontool.Config{
-		Name:        "insert_text",
-		Description: "Insert text at a 1-based line number",
-	}, func(_ tool.Context, in insertArgs) (insertResult, error) {
-		f, err := os.Open(in.Path)
-		if err != nil {
-			return insertResult{}, err
-		}
-		defer func() { _ = f.Close() }()
-		var lines []string
-		s := bufio.NewScanner(f)
-		for s.Scan() {
-			lines = append(lines, s.Text())
-		}
-		if err := s.Err(); err != nil {
-			return insertResult{}, err
-		}
-		if in.Line < 1 {
-			in.Line = 1
-		}
-		if in.Line > len(lines)+1 {
-			in.Line = len(lines) + 1
-		}
-		i := in.Line - 1
-		lines = append(lines[:i], append([]string{in.Text}, lines[i:]...)...)
-		out := strings.Join(lines, "\n")
-		if err := os.WriteFile(in.Path, []byte(out), 0o644); err != nil {
-			return insertResult{}, err
-		}
-		return insertResult{Lines: len(lines)}, nil
-	})
-}
-
-type deleteArgs struct {
-	Path  string
-	Start int
-	End   int
-}
-type deleteResult struct{ Lines int }
-
-// NewDeleteLinesTool returns a tool that deletes an inclusive line range.
-func NewDeleteLinesTool() (tool.Tool, error) {
-	return functiontool.New[deleteArgs, deleteResult](functiontool.Config{
-		Name:        "delete_lines",
-		Description: "Delete lines [start,end] inclusive (1-based)",
-	}, func(_ tool.Context, in deleteArgs) (deleteResult, error) {
-		f, err := os.Open(in.Path)
-		if err != nil {
-			return deleteResult{}, err
-		}
-		defer func() { _ = f.Close() }()
-		var lines []string
-		s := bufio.NewScanner(f)
-		for s.Scan() {
-			lines = append(lines, s.Text())
-		}
-		if err := s.Err(); err != nil {
-			return deleteResult{}, err
-		}
-		if in.Start < 1 {
-			in.Start = 1
-		}
-		if in.End < in.Start {
-			in.End = in.Start
-		}
-		if in.Start > len(lines) {
-			return deleteResult{Lines: len(lines)}, nil
-		}
-		if in.End > len(lines) {
-			in.End = len(lines)
-		}
-		i := in.Start - 1
-		j := in.End
-		lines = append(lines[:i], lines[j:]...)
-		out := strings.Join(lines, "\n")
-		if err := os.WriteFile(in.Path, []byte(out), 0o644); err != nil {
-			return deleteResult{}, err
-		}
-		return deleteResult{Lines: len(lines)}, nil
-	})
-}
-
-type searchArgs struct {
-	Root    string
-	Pattern string
-	Glob    string
-}
-type searchHit struct {
-	Path string
-	Line int
-	Text string
-}
-type searchResult struct{ Hits []searchHit }
-
-// NewSearchTextTool returns a tool that searches text using regex.
-func NewSearchTextTool() (tool.Tool, error) {
-	return functiontool.New[searchArgs, searchResult](functiontool.Config{
-		Name:        "search_text",
-		Description: "Search text with regex over files honoring .gitignore",
-	}, func(_ tool.Context, in searchArgs) (searchResult, error) {
-		re, err := regexp.Compile(in.Pattern)
-		if err != nil {
-			return searchResult{}, err
-		}
-		var hits []searchHit
-		err = fsutil.WalkDirWithGitignore(context.Background(), in.Root, func(p string, d os.DirEntry, err error) error {
+		var files []seekFile
+		count := 0
+		err = fsutil.WalkDirWithGitignore(tc, in.Root, func(p string, d os.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -224,18 +71,168 @@ func NewSearchTextTool() (tool.Tool, error) {
 			defer func() { _ = f.Close() }()
 			sc := bufio.NewScanner(f)
 			ln := 0
+			var hits []seekHit
 			for sc.Scan() {
 				ln++
 				t := sc.Text()
 				if re.MatchString(t) {
-					hits = append(hits, searchHit{Path: p, Line: ln, Text: t})
+					hits = append(hits, seekHit{Line: ln, Text: t})
 				}
 			}
-			return sc.Err()
+			if err := sc.Err(); err != nil {
+				return err
+			}
+			if len(hits) > 0 {
+				sf := seekFile{Path: p, Hits: hits}
+				if in.IncludeContent {
+					b, rErr := os.ReadFile(p)
+					if rErr != nil {
+						return rErr
+					}
+					sf.Content = string(b)
+				}
+				files = append(files, sf)
+				count++
+				if in.MaxFiles > 0 && count >= in.MaxFiles {
+					return fmt.Errorf("seek limit reached")
+				}
+			}
+			return nil
+		})
+		if err != nil && err.Error() != "seek limit reached" {
+			return seekResult{}, err
+		}
+		return seekResult{Files: files}, nil
+	})
+}
+
+type listArgs struct {
+	Root        string
+	Glob        string
+	Regex       string
+	Recurse     bool
+	IncludeDirs bool
+}
+type listEntry struct {
+	Path  string
+	IsDir bool
+}
+type listResult struct{ Entries []listEntry }
+
+// NewListDirTool returns a tool that lists directory entries with optional recursion,
+// glob and regex filters, honoring .gitignore when recursing.
+func NewListDirTool() (tool.Tool, error) {
+	return functiontool.New[listArgs, listResult](functiontool.Config{
+		Name:        "list_dir",
+		Description: "List directory entries, with optional recursion, glob and regex filters (honors .gitignore)",
+	}, func(tc tool.Context, in listArgs) (listResult, error) {
+		var entries []listEntry
+		match := func(name string) (bool, error) {
+			if in.Glob != "" {
+				ok, err := path.Match(in.Glob, name)
+				if err != nil {
+					return false, err
+				}
+				if !ok {
+					return false, nil
+				}
+			}
+			if in.Regex != "" {
+				re, err := regexp.Compile(in.Regex)
+				if err != nil {
+					return false, err
+				}
+				if !re.MatchString(name) {
+					return false, nil
+				}
+			}
+			return true, nil
+		}
+		if !in.Recurse {
+			items, err := os.ReadDir(in.Root)
+			if err != nil {
+				return listResult{}, err
+			}
+			for _, d := range items {
+				ok, err := match(d.Name())
+				if err != nil {
+					return listResult{}, err
+				}
+				if !ok {
+					continue
+				}
+				if d.IsDir() && !in.IncludeDirs {
+					continue
+				}
+				entries = append(entries, listEntry{Path: filepath.Join(in.Root, d.Name()), IsDir: d.IsDir()})
+			}
+			return listResult{Entries: entries}, nil
+		}
+		err := fsutil.WalkDirWithGitignore(tc, in.Root, func(p string, d os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			name := d.Name()
+			ok, mErr := match(name)
+			if mErr != nil {
+				return mErr
+			}
+			if !ok {
+				return nil
+			}
+			if d.IsDir() && !in.IncludeDirs {
+				return nil
+			}
+			entries = append(entries, listEntry{Path: p, IsDir: d.IsDir()})
+			return nil
 		})
 		if err != nil {
-			return searchResult{}, err
+			return listResult{}, err
 		}
-		return searchResult{Hits: hits}, nil
+		return listResult{Entries: entries}, nil
+	})
+}
+
+type textPatchArgs struct {
+	Root  string
+	Patch string
+	Strip int
+}
+type textPatchResult struct{ Output string }
+
+// NewApplyTextPatchTool returns a tool that applies a unified diff patch using git apply.
+func NewApplyTextPatchTool() (tool.Tool, error) {
+	return functiontool.New[textPatchArgs, textPatchResult](functiontool.Config{
+		Name:        "apply_text_patch",
+		Description: "Apply a unified diff patch via git apply",
+	}, func(tc tool.Context, in textPatchArgs) (textPatchResult, error) {
+		if in.Strip < 0 {
+			in.Strip = 0
+		}
+		tmp, err := os.CreateTemp("", "patch-*.diff")
+		if err != nil {
+			return textPatchResult{}, err
+		}
+		defer func() { _ = os.Remove(tmp.Name()) }()
+		if _, err := tmp.WriteString(in.Patch); err != nil {
+			_ = tmp.Close()
+			return textPatchResult{}, err
+		}
+		_ = tmp.Close()
+		args := []string{"apply", "--unsafe-paths", "--reject", "--whitespace=nowarn"}
+		if in.Strip > 0 {
+			args = append(args, "-p", strconv.Itoa(in.Strip))
+		}
+		args = append(args, tmp.Name())
+		cmd := exec.CommandContext(tc, "git", args...)
+		if in.Root != "" {
+			cmd.Dir = in.Root
+		}
+		cmd.Env = os.Environ()
+		out, runErr := cmd.CombinedOutput()
+		if runErr != nil {
+			return textPatchResult{Output: string(out)}, fmt.Errorf("git apply failed: %w", runErr)
+		}
+		return textPatchResult{Output: string(out)}, nil
 	})
 }
