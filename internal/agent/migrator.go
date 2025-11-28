@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/shikanime-studio/automata/internal/config"
-	igithub "github.com/shikanime-studio/automata/internal/github"
-	ikio "github.com/shikanime-studio/automata/internal/kio"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
 	"google.golang.org/adk/model/gemini"
 	"google.golang.org/adk/tool"
 	"google.golang.org/adk/tool/functiontool"
 	"google.golang.org/genai"
+
+	"github.com/shikanime-studio/automata/internal/config"
+	igithub "github.com/shikanime-studio/automata/internal/github"
+	ikio "github.com/shikanime-studio/automata/internal/kio"
 )
 
 // MigratorConfig controls the migrator agent setup.

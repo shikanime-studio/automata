@@ -8,9 +8,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/fsutil"
 	"google.golang.org/adk/tool"
 	"google.golang.org/adk/tool/functiontool"
+
+	"github.com/shikanime-studio/automata/internal/fsutil"
 )
 
 type (
@@ -102,7 +103,7 @@ func NewInsertTextTool() (tool.Tool, error) {
 		if err != nil {
 			return insertResult{}, err
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		var lines []string
 		s := bufio.NewScanner(f)
 		for s.Scan() {
@@ -144,7 +145,7 @@ func NewDeleteLinesTool() (tool.Tool, error) {
 		if err != nil {
 			return deleteResult{}, err
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		var lines []string
 		s := bufio.NewScanner(f)
 		for s.Scan() {
@@ -219,7 +220,7 @@ func NewSearchTextTool() (tool.Tool, error) {
 			if oErr != nil {
 				return oErr
 			}
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 			sc := bufio.NewScanner(f)
 			ln := 0
 			for sc.Scan() {

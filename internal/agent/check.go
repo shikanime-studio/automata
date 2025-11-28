@@ -25,8 +25,8 @@ func RunCheck(ctx context.Context, root string) error {
 		}
 		slog.InfoContext(ctx, "running nix flake check", "dir", root)
 		out, runErr := runNixFlakeCheck(ctx, root)
-		if len(out) > 0 {
-			slog.InfoContext(ctx, "nix flake check output", "dir", root, "output", string(out))
+		if out != "" {
+			slog.InfoContext(ctx, "nix flake check output", "dir", root, "output", out)
 		}
 		if runErr == nil {
 			slog.InfoContext(ctx, "nix flake check succeeded", "dir", root)

@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"sigs.k8s.io/kustomize/kyaml/yaml"
+
 	"github.com/shikanime-studio/automata/internal/container"
 	update "github.com/shikanime-studio/automata/internal/updater"
-	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 type fakeImageUpdater struct {

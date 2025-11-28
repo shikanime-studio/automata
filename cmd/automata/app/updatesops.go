@@ -10,9 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/fsutil"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/shikanime-studio/automata/internal/fsutil"
 )
 
 // NewUpdateSopsCmd encrypts plaintext files to `.enc.` when missing or outdated.
@@ -39,7 +40,7 @@ func NewUpdateSopsCmd() *cobra.Command {
 // runUpdateSops executes sops encryption updates across the directory tree.
 func runUpdateSops(ctx context.Context, root string) error {
 	var g errgroup.Group
-	err := fsutil.WalkDirWithGitignore(root, func(path string, d fs.DirEntry, err error) error {
+	err := fsutil.WalkDirWithGitignore(ctx, root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -85,7 +86,7 @@ func runSopsEncrypt(ctx context.Context, plainPath, encPath string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	cmd := exec.CommandContext(ctx, "sops", "--encrypt", plainPath)
 	cmd.Stdout = out

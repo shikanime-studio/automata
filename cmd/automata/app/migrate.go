@@ -3,13 +3,14 @@ package app
 import (
 	"strings"
 
+	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/shikanime-studio/automata/internal/config"
 	"github.com/shikanime-studio/automata/internal/container"
 	"github.com/shikanime-studio/automata/internal/github"
 	"github.com/shikanime-studio/automata/internal/helm"
 	ikio "github.com/shikanime-studio/automata/internal/kio"
-	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 )
 
 // NewMigrateCmd performs migration: checks upgrades and applies corrections for new versions.

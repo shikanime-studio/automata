@@ -9,9 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/fsutil"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/shikanime-studio/automata/internal/fsutil"
 )
 
 // NewUpdateScriptCmd runs all update.sh scripts found under the provided directory.
@@ -38,7 +39,7 @@ func NewUpdateScriptCmd() *cobra.Command {
 // runUpdateScript walks the directory tree starting at root and executes every update.sh found.
 func runUpdateScript(ctx context.Context, root string) error {
 	var scripts []string
-	err := fsutil.WalkDirWithGitignore(root, func(path string, d os.DirEntry, err error) error {
+	err := fsutil.WalkDirWithGitignore(ctx, root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

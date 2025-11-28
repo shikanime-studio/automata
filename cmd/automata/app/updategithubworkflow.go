@@ -3,11 +3,12 @@ package app
 import (
 	"strings"
 
+	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/shikanime-studio/automata/internal/config"
 	"github.com/shikanime-studio/automata/internal/github"
 	ikio "github.com/shikanime-studio/automata/internal/kio"
-	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 )
 
 // NewUpdateGitHubWorkflowCmd creates the "githubworkflow" command that updates

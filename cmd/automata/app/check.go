@@ -5,9 +5,10 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/agent"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/shikanime-studio/automata/internal/agent"
 )
 
 // NewCheckCmd returns a command that retries `nix flake check` with fixes.
