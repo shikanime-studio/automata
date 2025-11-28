@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/helm"
-	"github.com/shikanime-studio/automata/internal/updater"
-
 	"golang.org/x/sync/errgroup"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
+
+	"github.com/shikanime-studio/automata/internal/helm"
+	"github.com/shikanime-studio/automata/internal/updater"
 )
 
 // UpdateK0sctlConfigs builds a pipeline to update helm chart versions in k0sctl configs.
@@ -118,9 +118,13 @@ func UpdateK0sctlConfigchart(
 	repos map[string]string,
 ) yaml.Filter {
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
-		chartNameNode, err := node.Pipe(yaml.Lookup("chart"), yaml.Get("name"))
-		if err != nil {
-			return nil, fmt.Errorf("lookup chart name failed: %w", err)
+		chartNameNode, err := node.Pipe(yaml.Get("chartname"))
+		if err != nil || yaml.GetValue(chartNameNode) == "" {
+			chartNameNode, err = node.Pipe(yaml.Lookup("chart"), yaml.Get("name"))
+			if err != nil {
+				return nil, fmt.Errorf("lookup chart name failed: %w", err)
+			}
+
 		}
 		chartName := yaml.GetValue(chartNameNode)
 		if chartName == "" {
