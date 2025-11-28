@@ -247,6 +247,15 @@ func canonicalWithRegex(re *regexp.Regexp, m []string) string {
 	return fmt.Sprintf("v%s", s)
 }
 
+// MajorMinorPatch returns the major.minor.patch part of the version.
+func MajorMinorPatch(v string, opts ...Option) (string, error) {
+	v, err := Canonical(v, opts...)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSuffix(v, semver.Prerelease(v)), nil
+}
+
 // PolicyType enumerates upgrade policies derived from the baseline version.
 type PolicyType int
 
