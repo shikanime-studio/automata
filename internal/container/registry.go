@@ -4,22 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
-
 	"github.com/shikanime-studio/automata/internal/updater"
 )
 
 // ListTags fetches tags for the given image (auth keychain, fallback anonymous).
 func ListTags(ctx context.Context, imageRef *ImageRef) ([]string, error) {
-	if strings.Contains(imageRef.Name, ":") {
-		return nil, fmt.Errorf(
-			"invalid image name %q: repository must not include a tag; set tag in ImageRef.Tag",
-			imageRef.Name,
-		)
-	}
 	// Try with keychain, then fallback to anonymous; forward any provided crane options.
 	tags, err := crane.ListTags(
 		imageRef.Name,
@@ -107,6 +99,19 @@ func FindLatestTag(
 		}
 		cmp, err := updater.Compare(bestTag, tag, o.updateOptions...)
 		if err != nil {
+			if updater.IsNotValid(err) {
+				slog.WarnContext(
+					ctx,
+					err.Error(),
+					"tag",
+					tag,
+					"image",
+					imageRef.String(),
+					"err",
+					err,
+				)
+				continue
+			}
 			return "", fmt.Errorf("compare tags: %w", err)
 		}
 		switch cmp {

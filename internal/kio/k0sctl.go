@@ -118,9 +118,9 @@ func UpdateK0sctlConfigchart(
 	repos map[string]string,
 ) yaml.Filter {
 	return yaml.FilterFunc(func(node *yaml.RNode) (*yaml.RNode, error) {
-		chartNameNode, err := node.Pipe(yaml.Get("chartname"))
+		chartNameNode, err := node.Pipe(yaml.Lookup("chart", "name"))
 		if err != nil {
-			return nil, fmt.Errorf("lookup chartname failed: %w", err)
+			return nil, fmt.Errorf("lookup chart.name failed: %w", err)
 		}
 		chartName := yaml.GetValue(chartNameNode)
 		if chartName == "" {

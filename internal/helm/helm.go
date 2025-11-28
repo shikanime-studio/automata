@@ -130,6 +130,19 @@ func FindLatestVersion(
 		}
 		cmp, err := updater.Compare(bestVers, v, o.updateOptions...)
 		if err != nil {
+			if updater.IsNotValid(err) {
+				slog.WarnContext(
+					ctx,
+					err.Error(),
+					"version",
+					v,
+					"chart",
+					chart.String(),
+					"err",
+					err,
+				)
+				continue
+			}
 			return "", fmt.Errorf("failed to compare versions: %w", err)
 		}
 		switch cmp {

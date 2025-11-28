@@ -2,27 +2,28 @@
 package updater
 
 import (
+	"errors"
 	"fmt"
-	"log/slog"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"golang.org/x/mod/semver"
 )
 
-// StrategyType describes the kind of version update strategy.
-type StrategyType int
-
-// StrategyType values for selecting update behavior.
-const (
-	CanonicalUpdate StrategyType = iota
-	MajorMinorUpdate
-	MajorUpdate
-	PreReleaseUpdate
+var (
+	ErrPolicyRejection = errors.New("policy rejection")
+	ErrTypeMismatch    = errors.New("type mismatch")
+	ErrInvalidTarget   = errors.New("invalid target version")
 )
+
+func IsNotValid(err error) bool {
+	return errors.Is(err, ErrInvalidTarget) || errors.Is(err, ErrPolicyRejection) || errors.Is(err, ErrTypeMismatch)
+}
 
 type options struct {
 	transformRegex *regexp.Regexp
+	policy         *PolicyType
 }
 
 // Option configures semver parsing and comparison behavior.
@@ -32,6 +33,12 @@ type Option = func(*options)
 func WithTransform(re *regexp.Regexp) Option {
 	return func(o *options) {
 		o.transformRegex = re
+	}
+}
+
+func WithPolicy(ut PolicyType) Option {
+	return func(o *options) {
+		o.policy = &ut
 	}
 }
 
@@ -59,40 +66,60 @@ func Compare(baseline, target string, opts ...Option) (Comparison, error) {
 		return Greater, nil
 	}
 
-	baselineStrategy, err := Strategy(baseline, opts...)
+	baselineType, err := Type(baseline, opts...)
 	if err != nil {
-		return 0, fmt.Errorf("failed to determine strategy for baseline %q: %w", baseline, err)
+		return Equal, fmt.Errorf("failed to determine policy for baseline %q: %w", baseline, err)
 	}
-	targetStrategy, err := Strategy(target, opts...)
+	targetType, err := Type(target, opts...)
 	if err != nil {
-		slog.Warn("failed to determine strategy for target %q: %v", target, err)
-		return Less, nil
+		return Equal, fmt.Errorf("%w: %v", ErrInvalidTarget, err)
 	}
-	if targetStrategy != baselineStrategy {
-		return Less, nil
+	if targetType != baselineType {
+		return Equal, fmt.Errorf("%w: type mismatch: %v != %v", ErrTypeMismatch, targetType, baselineType)
 	}
 
 	baseline, err = Canonical(baseline, opts...)
 	if err != nil {
-		return Less, fmt.Errorf("failed to canonicalize baseline %q: %w", baseline, err)
+		return Equal, fmt.Errorf("failed to canonicalize baseline %q: %w", baseline, err)
 	}
 	target, err = Canonical(target, opts...)
 	if err != nil {
-		return Less, fmt.Errorf("failed to canonicalize target %q: %w", target, err)
+		return Equal, fmt.Errorf("%w: %v", ErrInvalidTarget, err)
 	}
 
 	switch cmp := semver.Compare(baseline, target); {
 	case cmp == 0:
 		return Equal, nil
 	case cmp < 0:
+		o := makeOptions(opts...)
+		if o.policy != nil {
+			pol, err := Policy(baseline)
+			if err != nil {
+				return Equal, fmt.Errorf("%w: %v", ErrPolicyRejection, err)
+			}
+			if *o.policy != pol {
+				return Equal, fmt.Errorf("%w: policy mismatch: %v != %v", ErrPolicyRejection, pol, *o.policy)
+			}
+		}
 		return Greater, nil
 	default:
 		return Less, nil
 	}
 }
 
-// Strategy determines the update strategy for a version string.
-func Strategy(v string, opts ...Option) (StrategyType, error) {
+// VersionType describes the kind of version update strategy.
+type VersionType int
+
+// TypeType values for selecting update behavior.
+const (
+	CanonicalVersion VersionType = iota
+	MajorMinorVersion
+	MajorVersion
+	PreReleaseVersion
+)
+
+// Type determines the update strategy for a version string.
+func Type(v string, opts ...Option) (VersionType, error) {
 	o := makeOptions(opts...)
 
 	if o.transformRegex != nil {
@@ -108,16 +135,16 @@ func Strategy(v string, opts ...Option) (StrategyType, error) {
 		v = getSubexpValue(o.transformRegex, m, "version")
 		if v == "" {
 			if getSubexpValue(o.transformRegex, m, "prerelease") != "" {
-				return PreReleaseUpdate, nil
+				return PreReleaseVersion, nil
 			}
 			if getSubexpValue(o.transformRegex, m, "patch") != "" {
-				return CanonicalUpdate, nil
+				return CanonicalVersion, nil
 			}
 			if getSubexpValue(o.transformRegex, m, "minor") != "" {
-				return MajorMinorUpdate, nil
+				return MajorMinorVersion, nil
 			}
 			if getSubexpValue(o.transformRegex, m, "major") != "" {
-				return MajorUpdate, nil
+				return MajorVersion, nil
 			}
 			return 0, fmt.Errorf("unable to determine strategy from tag %q", v)
 		}
@@ -130,13 +157,13 @@ func Strategy(v string, opts ...Option) (StrategyType, error) {
 
 	switch {
 	case semver.Prerelease(v) != "" || semver.Build(v) != "":
-		return PreReleaseUpdate, nil
-	case v == semver.Canonical(v):
-		return CanonicalUpdate, nil
-	case v == semver.MajorMinor(v):
-		return MajorMinorUpdate, nil
+		return PreReleaseVersion, nil
 	case v == semver.Major(v):
-		return MajorUpdate, nil
+		return MajorVersion, nil
+	case v == semver.MajorMinor(v):
+		return MajorMinorVersion, nil
+	case v == semver.Canonical(v):
+		return CanonicalVersion, nil
 	default:
 		return 0, fmt.Errorf("unable to determine strategy from tag %q", v)
 	}
@@ -203,4 +230,55 @@ func canonicalWithRegex(re *regexp.Regexp, m []string) string {
 		s += "+" + bld
 	}
 	return fmt.Sprintf("v%s", s)
+}
+
+type PolicyType int
+
+const (
+	MajorRelease PolicyType = iota
+	PathRelease
+	MinorRelease
+)
+
+func Policy(baseline string) (PolicyType, error) {
+	major, minor, patch, err := semverParts(baseline)
+	if err != nil {
+		return MajorRelease, err
+	}
+	if major == 0 && minor == 0 && patch > 0 {
+		return PathRelease, nil
+	}
+	if major == 0 && minor > 0 {
+		return MinorRelease, nil
+	}
+	return MajorRelease, nil
+}
+
+func semverParts(v string) (int, int, int, error) {
+	v = strings.TrimPrefix(v, "v")
+	if i := strings.IndexAny(v, "-+"); i >= 0 {
+		v = v[:i]
+	}
+	parts := strings.Split(v, ".")
+	switch len(parts) {
+	case 1:
+		parts = []string{parts[0], "0", "0"}
+	case 2:
+		parts = []string{parts[0], parts[1], "0"}
+	default:
+		parts = parts[:3]
+	}
+	maj, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	min, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	pat, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return maj, min, pat, nil
 }
