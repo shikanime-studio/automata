@@ -55,6 +55,10 @@ const (
 
 // Compare compares two versions using consistent strategy and canonicalization.
 func Compare(baseline, target string, opts ...Option) (Comparison, error) {
+	if baseline == "latest" {
+		return Greater, nil
+	}
+
 	baselineStrategy, err := Strategy(baseline, opts...)
 	if err != nil {
 		return 0, fmt.Errorf("failed to determine strategy for baseline %q: %w", baseline, err)
