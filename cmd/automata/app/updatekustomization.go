@@ -3,10 +3,11 @@ package app
 import (
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/container"
-	ikio "github.com/shikanime-studio/automata/internal/kio"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/shikanime-studio/automata/internal/container"
+	ikio "github.com/shikanime-studio/automata/internal/kio"
 )
 
 // NewUpdateKustomizationCmd updates kustomize image tags across a directory tree.

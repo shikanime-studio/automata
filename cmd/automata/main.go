@@ -6,9 +6,10 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"github.com/shikanime-studio/automata/cmd/automata/app"
 	"github.com/shikanime-studio/automata/internal/config"
-	"github.com/spf13/cobra"
 )
 
 // init configures the global logger using values from the application

@@ -7,11 +7,12 @@ import (
 	"log/slog"
 	"regexp"
 
-	"github.com/shikanime-studio/automata/internal/container"
-	update "github.com/shikanime-studio/automata/internal/updater"
 	"golang.org/x/sync/errgroup"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
+
+	"github.com/shikanime-studio/automata/internal/container"
+	update "github.com/shikanime-studio/automata/internal/updater"
 )
 
 // UpdateKustomization creates a kustomize pipeline to update image tags

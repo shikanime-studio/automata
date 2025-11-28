@@ -60,7 +60,7 @@ func Compare(baseline, target string, opts ...Option) (Comparison, error) {
 	}
 	targetStrategy, err := Strategy(target, opts...)
 	if err != nil {
-		return Less, nil
+		return Less, fmt.Errorf("failed to determine strategy for target %q: %w", target, err)
 	}
 	if targetStrategy != baselineStrategy {
 		return Less, nil

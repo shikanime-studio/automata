@@ -3,10 +3,11 @@ package app
 import (
 	"strings"
 
-	"github.com/shikanime-studio/automata/internal/helm"
-	ikio "github.com/shikanime-studio/automata/internal/kio"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/shikanime-studio/automata/internal/helm"
+	ikio "github.com/shikanime-studio/automata/internal/kio"
 )
 
 // NewUpdateK0sctlCmd updates k0sctl clusters with the latest chart versions.
