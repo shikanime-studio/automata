@@ -146,6 +146,10 @@ func Strategy(v string, opts ...Option) (StrategyType, error) {
 func Canonical(v string, opts ...Option) (string, error) {
 	o := makeOptions(opts...)
 
+	if v == "latest" {
+		return "v0.0.0", nil
+	}
+
 	if o.transformRegex != nil {
 		m := o.transformRegex.FindStringSubmatch(v)
 		if m == nil {
