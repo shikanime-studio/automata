@@ -253,7 +253,9 @@ func MajorMinorPatch(v string, opts ...Option) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSuffix(v, semver.Prerelease(v)), nil
+	v = strings.TrimSuffix(v, semver.Build(v))
+	v = strings.TrimSuffix(v, semver.Prerelease(v))
+	return v, nil
 }
 
 // PolicyType enumerates upgrade policies derived from the baseline version.
