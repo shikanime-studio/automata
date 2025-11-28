@@ -113,7 +113,7 @@ func (gc *Client) FindLatestActionTag(
 		cmp, err := updater.Compare(bestTag, *t.Name, o.updateOptions...)
 		if err != nil {
 			if updater.IsNotValid(err) {
-				slog.WarnContext(
+				slog.DebugContext(
 					ctx,
 					err.Error(),
 					"tag",

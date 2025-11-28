@@ -131,7 +131,7 @@ func FindLatestVersion(
 		cmp, err := updater.Compare(bestVers, v, o.updateOptions...)
 		if err != nil {
 			if updater.IsNotValid(err) {
-				slog.WarnContext(
+				slog.DebugContext(
 					ctx,
 					err.Error(),
 					"version",
