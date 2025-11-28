@@ -166,6 +166,7 @@ func TestCompare_TargetError(t *testing.T) {
 		t.Fatalf("expected invalid target error, got %v", err)
 	}
 }
+
 func TestPolicy(t *testing.T) {
 	cases := map[string]PolicyType{
 		"v0.0.1": PathRelease,
