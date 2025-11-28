@@ -137,6 +137,5 @@ func (gc *Client) FindLatestActionTag(
 			)
 		}
 	}
-	fmt.Printf("bestTag: %q\n", bestTag)
 	return bestTag, nil
 }
