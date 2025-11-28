@@ -27,8 +27,7 @@ func (f fakeHelmUpdater) Update(
 }
 
 func TestUpdateK0sctlConfigchart_UpdatesVersion(t *testing.T) {
-	doc := `chart:
-  name: repo/app
+	doc := `chartname: repo/app
 version: 1.0.0`
 	rn := yaml.MustParse(doc)
 	repos := map[string]string{"repo": "https://example.com"}
@@ -50,8 +49,7 @@ version: 1.0.0`
 }
 
 func TestUpdateK0sctlConfigchart_EmptyLatestNoChange(t *testing.T) {
-	doc := `chart:
-  name: repo/app
+	doc := `chartname: repo/app
 version: 1.0.0`
 	rn := yaml.MustParse(doc)
 	repos := map[string]string{"repo": "https://example.com"}
@@ -73,8 +71,7 @@ version: 1.0.0`
 }
 
 func TestUpdateK0sctlConfigchart_InvalidRepoURL(t *testing.T) {
-	doc := `chart:
-  name: repo/app
+	doc := `chartname: repo/app
 version: 1.0.0`
 	rn := yaml.MustParse(doc)
 	repos := map[string]string{"repo": "invalid-url"}
@@ -99,11 +96,9 @@ func TestUpdateK0sctlConfig_ProcessesCharts(t *testing.T) {
             - name: repo
               url: https://example.com
             charts:
-            - chart:
-                name: repo/app
+            - hartname: repo/app
               version: 1.0.0
-            - chart:
-                name: repo/other
+            - chartname: repo/other
               version: 0.1.0`
 	rn := yaml.MustParse(doc)
 	_, err := UpdateK0sctlConfig(context.Background(), fakeHelmUpdater{latest: "2.0.0"}).Filter(rn)

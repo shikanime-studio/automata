@@ -158,12 +158,12 @@ func Type(v string, opts ...Option) (VersionType, error) {
 	switch {
 	case semver.Prerelease(v) != "" || semver.Build(v) != "":
 		return PreReleaseVersion, nil
-	case v == semver.Major(v):
-		return MajorVersion, nil
-	case v == semver.MajorMinor(v):
-		return MajorMinorVersion, nil
 	case v == semver.Canonical(v):
 		return CanonicalVersion, nil
+	case v == semver.MajorMinor(v):
+		return MajorMinorVersion, nil
+	case v == semver.Major(v):
+		return MajorVersion, nil
 	default:
 		return 0, fmt.Errorf("unable to determine strategy from tag %q", v)
 	}
