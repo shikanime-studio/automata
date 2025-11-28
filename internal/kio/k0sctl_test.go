@@ -96,7 +96,7 @@ func TestUpdateK0sctlConfig_ProcessesCharts(t *testing.T) {
             - name: repo
               url: https://example.com
             charts:
-            - hartname: repo/app
+            - chartname: repo/app
               version: 1.0.0
             - chartname: repo/other
               version: 0.1.0`
