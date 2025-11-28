@@ -55,6 +55,10 @@ const (
 
 // Compare compares two versions using consistent strategy and canonicalization.
 func Compare(baseline, target string, opts ...Option) (Comparison, error) {
+	if baseline == "latest" {
+		return Greater, nil
+	}
+
 	baselineStrategy, err := Strategy(baseline, opts...)
 	if err != nil {
 		return 0, fmt.Errorf("failed to determine strategy for baseline %q: %w", baseline, err)
@@ -90,10 +94,6 @@ func Compare(baseline, target string, opts ...Option) (Comparison, error) {
 // Strategy determines the update strategy for a version string.
 func Strategy(v string, opts ...Option) (StrategyType, error) {
 	o := makeOptions(opts...)
-
-	if v == "latest" {
-		return CanonicalUpdate, nil
-	}
 
 	if o.transformRegex != nil {
 		m := o.transformRegex.FindStringSubmatch(v)
@@ -145,10 +145,6 @@ func Strategy(v string, opts ...Option) (StrategyType, error) {
 // Canonical normalizes a tag to have a leading 'v' and no 'V' prefix.
 func Canonical(v string, opts ...Option) (string, error) {
 	o := makeOptions(opts...)
-
-	if v == "latest" {
-		return "v0.0.0", nil
-	}
 
 	if o.transformRegex != nil {
 		m := o.transformRegex.FindStringSubmatch(v)
