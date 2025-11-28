@@ -92,7 +92,7 @@ func FindLatestTag(
 	if err != nil {
 		return "", fmt.Errorf("list tags: %w", err)
 	}
-	bestTag := ""
+	bestTag := imageRef.Tag
 	for _, tag := range tags {
 		if _, ok := o.excludes[tag]; ok {
 			slog.DebugContext(
@@ -101,19 +101,24 @@ func FindLatestTag(
 				"tag",
 				tag,
 				"image",
-				imageRef.Name,
-				"baseline",
-				imageRef.Tag,
+				imageRef.String(),
 			)
 			continue
 		}
-		cmp, err := updater.Compare(imageRef.Tag, tag, o.updateOptions...)
+		cmp, err := updater.Compare(bestTag, tag, o.updateOptions...)
 		if err != nil {
 			return "", fmt.Errorf("compare tags: %w", err)
 		}
 		switch cmp {
 		case updater.Equal:
-			bestTag = tag
+			slog.DebugContext(
+				ctx,
+				"tag is equal to baseline",
+				"tag",
+				tag,
+				"image",
+				imageRef.String(),
+			)
 		case updater.Greater:
 			bestTag = tag
 		case updater.Less:
@@ -123,9 +128,7 @@ func FindLatestTag(
 				"tag",
 				tag,
 				"image",
-				imageRef.Name,
-				"baseline",
-				imageRef.Tag,
+				imageRef.String(),
 			)
 		}
 	}

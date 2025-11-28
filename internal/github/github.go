@@ -95,7 +95,7 @@ func (gc *Client) FindLatestActionTag(
 	if err != nil {
 		return "", fmt.Errorf("github list tags: %w", err)
 	}
-	bestTag := ""
+	bestTag := action.Version
 	for _, t := range tags {
 		if _, ok := o.excludes[*t.Name]; ok {
 			slog.DebugContext(
@@ -110,25 +110,30 @@ func (gc *Client) FindLatestActionTag(
 			)
 			continue
 		}
-		cmp, err := updater.Compare(*t.Name, action.Version, o.updateOptions...)
+		cmp, err := updater.Compare(bestTag, *t.Name, o.updateOptions...)
 		if err != nil {
 			return "", fmt.Errorf("failed to compare tags: %w", err)
 		}
 		switch cmp {
 		case updater.Equal:
-			bestTag = *t.Name
+			slog.DebugContext(
+				ctx,
+				"tag is equal to baseline",
+				"tag",
+				*t.Name,
+				"action",
+				action.String(),
+			)
 		case updater.Greater:
 			bestTag = *t.Name
 		case updater.Less:
 			slog.DebugContext(
 				ctx,
-				"tag excluded by update strategy",
+				"tag is less than baseline",
 				"tag",
 				*t.Name,
 				"action",
 				action.String(),
-				"baseline",
-				action.Version,
 			)
 		}
 	}
