@@ -2,6 +2,7 @@ package agent
 
 import (
 	"bufio"
+	"context"
 	"os"
 	"path"
 	"path/filepath"
@@ -200,7 +201,7 @@ func NewSearchTextTool() (tool.Tool, error) {
 			return searchResult{}, err
 		}
 		var hits []searchHit
-		err = fsutil.WalkDirWithGitignore(in.Root, func(p string, d os.DirEntry, err error) error {
+		err = fsutil.WalkDirWithGitignore(context.Background(), in.Root, func(p string, d os.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
