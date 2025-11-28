@@ -112,6 +112,21 @@ func (gc *Client) FindLatestActionTag(
 		}
 		cmp, err := updater.Compare(bestTag, *t.Name, o.updateOptions...)
 		if err != nil {
+			if updater.IsNotValid(err) {
+				slog.DebugContext(
+					ctx,
+					err.Error(),
+					"tag",
+					*t.Name,
+					"action",
+					action.String(),
+					"baseline",
+					action.Version,
+					"err",
+					err,
+				)
+				continue
+			}
 			return "", fmt.Errorf("failed to compare tags: %w", err)
 		}
 		switch cmp {

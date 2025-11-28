@@ -100,6 +100,19 @@ func FindLatestTag(
 		}
 		cmp, err := updater.Compare(bestTag, tag, o.updateOptions...)
 		if err != nil {
+			if updater.IsNotValid(err) {
+				slog.DebugContext(
+					ctx,
+					err.Error(),
+					"tag",
+					tag,
+					"image",
+					imageRef.String(),
+					"err",
+					err,
+				)
+				continue
+			}
 			return "", fmt.Errorf("compare tags: %w", err)
 		}
 		switch cmp {
