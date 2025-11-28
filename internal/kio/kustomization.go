@@ -233,7 +233,7 @@ func UpdateKustomizationLabelsNode(ctx context.Context) yaml.Filter {
 					continue
 				}
 
-				vers, err := update.Canonical(newTag, update.WithTransform(cfg.Transform))
+				vers, err := update.MajorMinorPatch(newTag, update.WithTransform(cfg.Transform))
 				if err != nil {
 					return nil, fmt.Errorf("parse semver for %s: %w", newTag, err)
 				}
