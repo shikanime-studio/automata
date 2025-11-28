@@ -30,14 +30,17 @@ func ParseActionRef(uses string) (ref *ActionRef, err error) {
 		return nil, fmt.Errorf("invalid uses: missing '@'")
 	}
 	path := strings.TrimSpace(parts[0])
-	version := strings.TrimSpace(parts[1])
-	if path == "" || version == "" {
+	if path == "" {
 		return nil, fmt.Errorf("invalid uses: empty action or version")
 	}
 	pathParts := strings.Split(path, "/")
 	if len(pathParts) != 2 || strings.TrimSpace(pathParts[0]) == "" ||
 		strings.TrimSpace(pathParts[1]) == "" {
 		return nil, fmt.Errorf("invalid action path %q, expected <owner>/<repo>", path)
+	}
+	version := strings.TrimSpace(parts[1])
+	if version == "" {
+		version = "latest"
 	}
 	return &ActionRef{Owner: pathParts[0], Repo: pathParts[1], Version: version}, nil
 }

@@ -91,6 +91,10 @@ func Compare(baseline, target string, opts ...Option) (Comparison, error) {
 func Strategy(v string, opts ...Option) (StrategyType, error) {
 	o := makeOptions(opts...)
 
+	if v == "latest" {
+		return CanonicalUpdate, nil
+	}
+
 	if o.transformRegex != nil {
 		m := o.transformRegex.FindStringSubmatch(v)
 		if m == nil {

@@ -145,6 +145,9 @@ func UpdateK0sctlConfigchart(
 			return nil, fmt.Errorf("lookup version failed: %w", err)
 		}
 		version := yaml.GetValue(versionNode)
+		if version == "" {
+			version = "latest"
+		}
 
 		ref := &helm.ChartRef{RepoURL: repoURL, Name: chartName, Version: version}
 		ver, err := u.Update(ctx, ref)

@@ -116,7 +116,7 @@ func UpdateKustomizationImages(
 			if newTag != "" {
 				imageRef.Tag = newTag
 			} else {
-				imageRef.Tag = "0.0.0"
+				imageRef.Tag = "latest"
 			}
 
 			excludes := map[string]struct{}{}
