@@ -88,7 +88,7 @@ func UpdateKustomizationImages(
 		for _, img := range imageNodes {
 			nameNode, err := img.Pipe(yaml.Get("name"))
 			if err != nil {
-				slog.Warn("missing name in images entry", "err", err)
+				slog.WarnContext(ctx, "missing name in images entry", "err", err)
 				continue
 			}
 			name := yaml.GetValue(nameNode)
@@ -210,7 +210,7 @@ func UpdateKustomizationLabelsNode(ctx context.Context) yaml.Filter {
 			for _, img := range imageNodes {
 				nameNode, err := img.Pipe(yaml.Get("name"))
 				if err != nil {
-					slog.Warn("missing name in images entry", "err", err)
+					slog.WarnContext(ctx, "missing name in images entry", "err", err)
 					continue
 				}
 				name := yaml.GetValue(nameNode)
