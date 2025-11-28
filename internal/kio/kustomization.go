@@ -115,6 +115,8 @@ func UpdateKustomizationImages(
 			newTag := yaml.GetValue(newTagNode)
 			if newTag != "" {
 				imageRef.Tag = newTag
+			} else {
+				imageRef.Tag = "0.0.0"
 			}
 
 			excludes := map[string]struct{}{}

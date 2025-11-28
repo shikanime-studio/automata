@@ -3,6 +3,7 @@ package updater
 
 import (
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 
@@ -60,7 +61,8 @@ func Compare(baseline, target string, opts ...Option) (Comparison, error) {
 	}
 	targetStrategy, err := Strategy(target, opts...)
 	if err != nil {
-		return Less, fmt.Errorf("failed to determine strategy for target %q: %w", target, err)
+		slog.Warn("failed to determine strategy for target %q: %v", target, err)
+		return Less, nil
 	}
 	if targetStrategy != baselineStrategy {
 		return Less, nil
