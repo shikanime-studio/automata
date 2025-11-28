@@ -5,68 +5,68 @@ import (
 	"testing"
 )
 
-func TestStrategy_DetectsTypes(t *testing.T) {
-	cases := map[string]StrategyType{
-		"v1":        MajorUpdate,
-		"1":         MajorUpdate,
-		"v1.1":      MajorMinorUpdate,
-		"1.1":       MajorMinorUpdate,
-		"v1.1.1":    CanonicalUpdate,
-		"1.1.1":     CanonicalUpdate,
-		"v2.0.0":    CanonicalUpdate,
-		"v2.1.0":    CanonicalUpdate,
-		"v2.1.0-rc": PreReleaseUpdate,
-		"v2.1.0+b1": PreReleaseUpdate,
+func TestType_DetectsTypes(t *testing.T) {
+	cases := map[string]VersionType{
+		"v1":        MajorVersion,
+		"1":         MajorVersion,
+		"v1.1":      MajorMinorVersion,
+		"1.1":       MajorMinorVersion,
+		"v1.1.1":    CanonicalVersion,
+		"1.1.1":     CanonicalVersion,
+		"v2.0.0":    CanonicalVersion,
+		"v2.1.0":    CanonicalVersion,
+		"v2.1.0-rc": PreReleaseVersion,
+		"v2.1.0+b1": PreReleaseVersion,
 	}
 	for v, want := range cases {
 		t.Run(v, func(t *testing.T) {
-			got, err := Strategy(v)
+			got, err := Type(v)
 			if err != nil {
-				t.Fatalf("Strategy(%q) error: %v", v, err)
+				t.Fatalf("Type(%q) error: %v", v, err)
 			}
 			if got != want {
-				t.Fatalf("Strategy(%q)=%v want %v", v, got, want)
+				t.Fatalf("Type(%q)=%v want %v", v, got, want)
 			}
 		})
 	}
 }
 
-func TestStrategy_WithTransform(t *testing.T) {
+func TestType_WithTransform(t *testing.T) {
 	re := regexp.MustCompile(`^release-(?P<major>\d+)(?:\.(?P<minor>\d+))?(?:\.(?P<patch>\d+))?$`)
-	cases := map[string]StrategyType{
-		"release-1":     MajorUpdate,
-		"release-1.1":   MajorMinorUpdate,
-		"release-1.1.1": CanonicalUpdate,
+	cases := map[string]VersionType{
+		"release-1":     MajorVersion,
+		"release-1.1":   MajorMinorVersion,
+		"release-1.1.1": CanonicalVersion,
 	}
 	for v, want := range cases {
 		t.Run(v, func(t *testing.T) {
-			got, err := Strategy(v, WithTransform(re))
+			got, err := Type(v, WithTransform(re))
 			if err != nil {
-				t.Fatalf("Strategy(%q) error: %v", v, err)
+				t.Fatalf("Type(%q) error: %v", v, err)
 			}
 			if got != want {
-				t.Fatalf("Strategy(%q)=%v want %v", v, got, want)
+				t.Fatalf("Type(%q)=%v want %v", v, got, want)
 			}
 		})
 	}
 }
 
-func TestStrategy_WithVersionCapture(t *testing.T) {
+func TestType_WithVersionCapture(t *testing.T) {
 	re := regexp.MustCompile(`^tag-(?P<version>v\d+(?:\.\d+){0,2}(?:-[^+]+)?(?:\+.+)?)$`)
-	cases := map[string]StrategyType{
-		"tag-v1":         MajorUpdate,
-		"tag-v1.1":       MajorMinorUpdate,
-		"tag-v1.1.1":     CanonicalUpdate,
-		"tag-v1.2.3-rc1": PreReleaseUpdate,
+	cases := map[string]VersionType{
+		"tag-v1":         MajorVersion,
+		"tag-v1.1":       MajorMinorVersion,
+		"tag-v1.1.1":     CanonicalVersion,
+		"tag-v1.2.3-rc1": PreReleaseVersion,
 	}
 	for v, want := range cases {
 		t.Run(v, func(t *testing.T) {
-			got, err := Strategy(v, WithTransform(re))
+			got, err := Type(v, WithTransform(re))
 			if err != nil {
-				t.Fatalf("Strategy(%q) error: %v", v, err)
+				t.Fatalf("Type(%q) error: %v", v, err)
 			}
 			if got != want {
-				t.Fatalf("Strategy(%q)=%v want %v", v, got, want)
+				t.Fatalf("Type(%q)=%v want %v", v, got, want)
 			}
 		})
 	}
@@ -88,7 +88,10 @@ func TestCompare_MajorUpdate(t *testing.T) {
 		t.Run(c.baseline+"->"+c.target, func(t *testing.T) {
 			got, err := Compare(c.baseline, c.target)
 			if err != nil {
-				t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
+				if !IsNotValid(err) {
+					t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
+				}
+				return
 			}
 			if got != c.want {
 				t.Fatalf("Compare(%q,%q)=%v want %v", c.baseline, c.target, got, c.want)
@@ -113,7 +116,10 @@ func TestCompare_MajorMinorUpdate(t *testing.T) {
 		t.Run(c.baseline+"->"+c.target, func(t *testing.T) {
 			got, err := Compare(c.baseline, c.target)
 			if err != nil {
-				t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
+				if !IsNotValid(err) {
+					t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
+				}
+				return
 			}
 			if got != c.want {
 				t.Fatalf("Compare(%q,%q)=%v want %v", c.baseline, c.target, got, c.want)
@@ -138,10 +144,47 @@ func TestCompare_CanonicalUpdate(t *testing.T) {
 		t.Run(c.baseline+"->"+c.target, func(t *testing.T) {
 			got, err := Compare(c.baseline, c.target)
 			if err != nil {
-				t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
+				if !IsNotValid(err) {
+					t.Fatalf("Compare(%q,%q) error: %v", c.baseline, c.target, err)
+				}
+				return
 			}
 			if got != c.want {
 				t.Fatalf("Compare(%q,%q)=%v want %v", c.baseline, c.target, got, c.want)
+			}
+		})
+	}
+}
+
+func TestCompare_TargetError(t *testing.T) {
+	re := regexp.MustCompile(`^.*(?P<version>v\d+(?:\.\d+){0,2}(?:-[^+]+)?(?:\+.+)?)$`)
+	_, err := Compare("v1.1.1", "1.1.2", WithTransform(re))
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if !IsNotValid(err) {
+		t.Fatalf("expected invalid target error, got %v", err)
+	}
+}
+
+func TestPolicy(t *testing.T) {
+	cases := map[string]PolicyType{
+		"v0.0.1": PathRelease,
+		"0.0.5":  PathRelease,
+		"v0.1":   MinorRelease,
+		"0.2.0":  MinorRelease,
+		"v1":     MajorRelease,
+		"1.0.0":  MajorRelease,
+		"v2.3.4": MajorRelease,
+	}
+	for v, want := range cases {
+		t.Run(v, func(t *testing.T) {
+			got, err := Policy(v)
+			if err != nil {
+				t.Fatalf("Policy(%q) error: %v", v, err)
+			}
+			if got != want {
+				t.Fatalf("Policy(%q)=%v want %v", v, got, want)
 			}
 		})
 	}

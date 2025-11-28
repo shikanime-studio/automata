@@ -19,6 +19,10 @@ type ChartRef struct {
 	Version string
 }
 
+func (c *ChartRef) String() string {
+	return fmt.Sprintf("%s/%s:%s", c.RepoURL, c.Name, c.Version)
+}
+
 // ListVersions returns all versions available for the given chart in the repo.
 func ListVersions(ctx context.Context, chart *ChartRef) ([]string, error) {
 	repoAdd := exec.CommandContext(
@@ -111,7 +115,7 @@ func FindLatestVersion(
 	if err != nil {
 		return "", err
 	}
-	bestVers := ""
+	bestVers := chart.Version
 	for _, v := range vers {
 		if _, ok := o.excludes[v]; ok {
 			slog.DebugContext(
@@ -119,17 +123,38 @@ func FindLatestVersion(
 				"chart version excluded by exclude list",
 				"version",
 				v,
-				"baseline",
-				chart.Version,
+				"chart",
+				chart.String(),
 			)
 			continue
 		}
-		cmp, err := updater.Compare(chart.Version, v, o.updateOptions...)
+		cmp, err := updater.Compare(bestVers, v, o.updateOptions...)
 		if err != nil {
+			if updater.IsNotValid(err) {
+				slog.DebugContext(
+					ctx,
+					err.Error(),
+					"version",
+					v,
+					"chart",
+					chart.String(),
+					"err",
+					err,
+				)
+				continue
+			}
 			return "", fmt.Errorf("failed to compare versions: %w", err)
 		}
 		switch cmp {
 		case updater.Equal:
+			slog.DebugContext(
+				ctx,
+				"chart version is equal to baseline",
+				"version",
+				v,
+				"chart",
+				chart.String(),
+			)
 			bestVers = v
 		case updater.Greater:
 			bestVers = v
@@ -139,8 +164,8 @@ func FindLatestVersion(
 				"chart version is less than baseline",
 				"version",
 				v,
-				"baseline",
-				chart.Version,
+				"chart",
+				chart.String(),
 			)
 		}
 	}
