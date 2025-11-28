@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -14,12 +13,6 @@ import (
 
 // ListTags fetches tags for the given image (auth keychain, fallback anonymous).
 func ListTags(ctx context.Context, imageRef *ImageRef) ([]string, error) {
-	if strings.Contains(imageRef.Name, ":") {
-		return nil, fmt.Errorf(
-			"invalid image name %q: repository must not include a tag; set tag in ImageRef.Tag",
-			imageRef.Name,
-		)
-	}
 	// Try with keychain, then fallback to anonymous; forward any provided crane options.
 	tags, err := crane.ListTags(
 		imageRef.Name,
@@ -92,7 +85,7 @@ func FindLatestTag(
 	if err != nil {
 		return "", fmt.Errorf("list tags: %w", err)
 	}
-	bestTag := ""
+	bestTag := imageRef.Tag
 	for _, tag := range tags {
 		if _, ok := o.excludes[tag]; ok {
 			slog.DebugContext(
@@ -101,19 +94,37 @@ func FindLatestTag(
 				"tag",
 				tag,
 				"image",
-				imageRef.Name,
-				"baseline",
-				imageRef.Tag,
+				imageRef.String(),
 			)
 			continue
 		}
-		cmp, err := updater.Compare(imageRef.Tag, tag, o.updateOptions...)
+		cmp, err := updater.Compare(bestTag, tag, o.updateOptions...)
 		if err != nil {
+			if updater.IsNotValid(err) {
+				slog.DebugContext(
+					ctx,
+					err.Error(),
+					"tag",
+					tag,
+					"image",
+					imageRef.String(),
+					"err",
+					err,
+				)
+				continue
+			}
 			return "", fmt.Errorf("compare tags: %w", err)
 		}
 		switch cmp {
 		case updater.Equal:
-			bestTag = tag
+			slog.DebugContext(
+				ctx,
+				"tag is equal to baseline",
+				"tag",
+				tag,
+				"image",
+				imageRef.String(),
+			)
 		case updater.Greater:
 			bestTag = tag
 		case updater.Less:
@@ -123,9 +134,7 @@ func FindLatestTag(
 				"tag",
 				tag,
 				"image",
-				imageRef.Name,
-				"baseline",
-				imageRef.Tag,
+				imageRef.String(),
 			)
 		}
 	}

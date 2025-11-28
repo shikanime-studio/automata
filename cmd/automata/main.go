@@ -43,7 +43,6 @@ func main() {
 	}
 	rootCmd.AddCommand(app.NewUpdateCmd(cfg))
 	rootCmd.AddCommand(app.NewCheckCmd())
-	rootCmd.AddCommand(app.NewMigrateCmd(cfg))
 	if err := rootCmd.Execute(); err != nil {
 		slog.Error("command execution failed", "err", err)
 		os.Exit(1)
