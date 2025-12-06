@@ -56,7 +56,6 @@ func runUpdateFlake(ctx context.Context, root string) error {
 	if err := filepath.WalkDir(root, handler); err != nil {
 		return fmt.Errorf("scan for flake.nix: %w", err)
 	}
-
 	return g.Wait()
 }
 

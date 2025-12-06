@@ -57,7 +57,6 @@ func runUpdateScript(ctx context.Context, root string) error {
 	if err := filepath.WalkDir(root, handler); err != nil {
 		return fmt.Errorf("scan for update.sh: %w", err)
 	}
-
 	return g.Wait()
 }
 
