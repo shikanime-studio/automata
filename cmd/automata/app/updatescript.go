@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -38,8 +39,8 @@ func NewUpdateScriptCmd() *cobra.Command {
 
 // runUpdateScript walks the directory tree starting at root and executes every update.sh found.
 func runUpdateScript(ctx context.Context, root string) error {
-	var scripts []string
-	err := fsutil.WalkDirWithGitignore(ctx, root, func(path string, d os.DirEntry, err error) error {
+	var g errgroup.Group
+	handler := func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -47,39 +48,39 @@ func runUpdateScript(ctx context.Context, root string) error {
 			return nil
 		}
 		if filepath.Base(path) == "update.sh" {
-			scripts = append(scripts, path)
+			g.Go(createUpdateScriptJob(ctx, path))
 		}
 		return nil
-	})
-	if err != nil {
+	}
+	handler = fsutil.SkipHidden(root, handler)
+	handler = fsutil.SkipGitIgnored(ctx, root, handler)
+	if err := filepath.WalkDir(root, handler); err != nil {
 		return fmt.Errorf("scan for update.sh: %w", err)
 	}
 
-	if len(scripts) == 0 {
-		slog.InfoContext(ctx, "no update.sh scripts found", "root", root)
+	return g.Wait()
+}
+
+func createUpdateScriptJob(ctx context.Context, scriptPath string) func() error {
+	return func() error {
+		dir := filepath.Dir(scriptPath)
+		slog.InfoContext(ctx, "running update script", "script", scriptPath)
+		// Note: "update.sh" relies on the script being in PATH or the behavior of the shell/OS.
+		// If the intention is to run the script found at scriptPath, usually one would use the absolute path or "./update.sh".
+		// Preserving original behavior:
+		cmd := exec.CommandContext(ctx, "update.sh")
+		cmd.Dir = dir
+		cmd.Env = os.Environ()
+
+		out, runErr := cmd.CombinedOutput()
+		if len(out) > 0 {
+			slog.InfoContext(ctx, "update.sh output", "script", scriptPath, "output", string(out))
+		}
+		if runErr != nil {
+			slog.WarnContext(ctx, "update.sh failed", "script", scriptPath, "err", runErr)
+			return fmt.Errorf("run %s: %w", scriptPath, runErr)
+		}
+		slog.InfoContext(ctx, "update script completed", "script", scriptPath)
 		return nil
 	}
-	var g errgroup.Group
-	for _, script := range scripts {
-		s := script
-		g.Go(func() error {
-			dir := filepath.Dir(s)
-			slog.InfoContext(ctx, "running update script", "script", s)
-			cmd := exec.CommandContext(ctx, "update.sh")
-			cmd.Dir = dir
-			cmd.Env = os.Environ()
-
-			out, runErr := cmd.CombinedOutput()
-			if len(out) > 0 {
-				slog.InfoContext(ctx, "update.sh output", "script", s, "output", string(out))
-			}
-			if runErr != nil {
-				slog.WarnContext(ctx, "update.sh failed", "script", s, "err", runErr)
-				return fmt.Errorf("run %s: %w", s, runErr)
-			}
-			slog.InfoContext(ctx, "update script completed", "script", s)
-			return nil
-		})
-	}
-	return g.Wait()
 }
