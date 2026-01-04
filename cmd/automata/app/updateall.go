@@ -36,9 +36,6 @@ func NewUpdateAllCmd(cfg *config.Config) *cobra.Command {
 					},
 				)
 				g.Go(func() error {
-					return runUpdateSops(cmd.Context(), r)
-				})
-				g.Go(func() error {
 					return ikio.UpdateK0sctlConfigs(cmd.Context(), hu, r).Execute()
 				})
 				g.Go(func() error {

@@ -10,7 +10,6 @@ Automata is a fast, ergonomic CLI to maintain Kubernetes clusters and repo
 hygiene:
 
 - Updates kustomize image tags and recommended labels across `kustomization.yaml`
-- Encrypts plaintext files to `.enc.*` with `sops` when missing or outdated
 - Bumps GitHub Actions in `.github/workflows` to latest major versions
 - Runs `update.sh` scripts discovered under a directory tree
 
@@ -18,7 +17,6 @@ hygiene:
 
 - Go `1.24.5`
 - Git (used for `.gitignore` detection)
-- SOPS (for encryption workflows)
 - Bash (to run `update.sh` scripts)
 - Optional: `GITHUB_TOKEN` for authenticated GitHub API requests
 
@@ -56,12 +54,6 @@ Alternatively:
 
 ```bash
 ./automata update kustomization [DIR]
-```
-
-- Only encrypt plaintext files to `.enc.*`:
-
-```bash
-./automata update sops [DIR]
 ```
 
 - Only update GitHub Actions versions in workflows:
@@ -133,13 +125,6 @@ Automata scans `.github/workflows/*.yml` and updates `uses: owner/repo@vX` to th
 - Only semver tags are considered
 - Prerelease tags are skipped unless configured
 - Requires `GITHUB_TOKEN` to avoid low anonymous API rate limits
-
-### SOPS Encryption
-
-Automata detects pairs like `secret.yaml` and `secret.enc.yaml`:
-
-- Encrypts when the encrypted file is missing or older than plaintext
-- Runs `sops --encrypt` to refresh the `.enc.*` output
 
 ### Update Scripts
 

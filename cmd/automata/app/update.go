@@ -19,7 +19,6 @@ func NewUpdateCmd(cfg *config.Config) *cobra.Command {
 	}
 	cmd.AddCommand(NewUpdateAllCmd(cfg))
 	cmd.AddCommand(NewUpdateKustomizationCmd())
-	cmd.AddCommand(NewUpdateSopsCmd())
 	cmd.AddCommand(NewUpdateGitHubWorkflowCmd(cfg))
 	cmd.AddCommand(NewUpdateK0sctlCmd())
 	cmd.AddCommand(NewUpdateScriptCmd())
