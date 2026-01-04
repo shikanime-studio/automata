@@ -283,7 +283,7 @@ func Policy(baseline string) (PolicyType, error) {
 	return MajorRelease, nil
 }
 
-func semverParts(v string) (int, int, int, error) {
+func semverParts(v string) (major, minor, patch int, err error) {
 	v = strings.TrimPrefix(v, "v")
 	if i := strings.IndexAny(v, "-+"); i >= 0 {
 		v = v[:i]
@@ -297,17 +297,17 @@ func semverParts(v string) (int, int, int, error) {
 	default:
 		parts = parts[:3]
 	}
-	maj, err := strconv.Atoi(parts[0])
+	major, err = strconv.Atoi(parts[0])
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	minorInt, err := strconv.Atoi(parts[1])
+	minor, err = strconv.Atoi(parts[1])
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	pat, err := strconv.Atoi(parts[2])
+	patch, err = strconv.Atoi(parts[2])
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	return maj, minorInt, pat, nil
+	return major, minor, patch, nil
 }
