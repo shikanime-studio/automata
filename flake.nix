@@ -72,20 +72,16 @@
           ...
         }:
         {
-          devenv.shells.default = {
-            imports = [
-              devlib.devenvModules.docs
-              devlib.devenvModules.formats
-              devlib.devenvModules.github
-              devlib.devenvModules.go
-              devlib.devenvModules.nix
-              devlib.devenvModules.opentofu
-              devlib.devenvModules.shell
-              devlib.devenvModules.shikanime-studio
-            ];
-
-            automata.package = self'.packages.default;
-          };
+          devenv.shells.default.imports = [
+            devlib.devenvModules.docs
+            devlib.devenvModules.formats
+            devlib.devenvModules.github
+            devlib.devenvModules.go
+            devlib.devenvModules.nix
+            devlib.devenvModules.opentofu
+            devlib.devenvModules.shell
+            devlib.devenvModules.shikanime-studio
+          ];
 
           packages.default = pkgs.buildGoModule {
             pname = "automata";
