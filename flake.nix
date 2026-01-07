@@ -66,7 +66,6 @@
       ];
       perSystem =
         {
-          self',
           pkgs,
           lib,
           ...
