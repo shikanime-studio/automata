@@ -1,4 +1,4 @@
-# automata
+# Automata
 
 A fast, ergonomic CLI to maintain Kubernetes clusters and repo hygiene: updates kustomize image tags, bumps GitHub Actions versions, and runs `update.sh` scripts.
 
