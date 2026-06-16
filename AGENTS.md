@@ -1,6 +1,8 @@
 # Automata
 
-A fast, ergonomic CLI to maintain Kubernetes clusters and repo hygiene: updates kustomize image tags, bumps GitHub Actions versions, and runs `update.sh` scripts.
+A fast, ergonomic CLI to maintain Kubernetes clusters and repo hygiene: updates
+kustomize image tags, bumps GitHub Actions versions, and runs `update.sh`
+scripts.
 
 **Language:** Go
 
@@ -9,6 +11,12 @@ A fast, ergonomic CLI to maintain Kubernetes clusters and repo hygiene: updates 
 - `cmd/automata/` — CLI entry point
 - `pkg/` — Internal packages (kustomize, actions, updater)
 - `flake.nix` — Nix development shell
+
+## Capabilities
+
+- Update kustomize image tags across manifests
+- Bump GitHub Actions versions in workflow files
+- Run `update.sh` scripts for automated repo maintenance
 
 ## Commit Style
 
@@ -32,4 +40,5 @@ A fast, ergonomic CLI to maintain Kubernetes clusters and repo hygiene: updates 
 - Require signed commits
 - Squash+rebase merge only
 
-*Licensed under Apache-2.0. Test against real `kustomization.yaml` files before submitting*
+*Licensed under Apache-2.0. Test against real `kustomization.yaml` files before
+submitting. Always use worktrees when making changes.*
